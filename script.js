@@ -21,8 +21,8 @@ const CONFIG = {
         stage3: '點擊愛心查看回憶 💕'
     },
 
-    // V6: Timeline configuration
-    currentVersionIndex: 2, // V6 is the third timeline point (index 2)
+    // V8: Timeline configuration (all points enabled)
+    currentVersionIndex: 4, // V8 is the fifth timeline point (index 4)
     timelineData: [
         {
             version: 'V4',
@@ -46,17 +46,17 @@ const CONFIG = {
             image: 'photos/3.jpg'
         },
         {
-            version: '敬請期待',
-            date: new Date('2026-01-01'), // 預留
-            title: '第四個時刻',
-            description: '未來的回憶',
+            version: 'V7',  // 開放此時間點
+            date: new Date('2023-08-01'),
+            title: '米漿/小貓',
+            description: '',
             image: 'photos/4.jpg'
         },
         {
-            version: '敬請期待',
-            date: new Date('2026-01-15'), // 預留
-            title: '第五個時刻',
-            description: '未來的回憶',
+            version: 'V8',  // 開放此時間點
+            date: new Date('2024-12-12'),
+            title: '結婚',
+            description: '',
             image: 'photos/5.jpg'
         }
     ]
