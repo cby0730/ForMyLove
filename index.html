@@ -35,16 +35,19 @@
         <div class="hint-container">
             <div class="hint">點擊匯聚愛心 ❤️</div>
         </div>
-        
+
         <!-- Timeline Container (V4 新增) -->
         <div class="timeline-container">
             <!-- 垂直時間軸線條 -->
             <div class="timeline-line"></div>
-            
+
             <!-- 時間點容器（動態生成） -->
             <div class="timeline-points"></div>
+
+            <!-- 繼續按鈕（進入 Stage 4） -->
+            <button class="timeline-continue">我們的故事，未完待續 →</button>
         </div>
-        
+
         <!-- 資訊對話框 (V4 新增) -->
         <div class="info-modal">
             <div class="info-content">
@@ -57,6 +60,36 @@
                     <p class="info-date"></p>
                     <p class="info-description"></p>
                 </div>
+            </div>
+        </div>
+
+        <!-- Timer Container (Stage 4) -->
+        <div class="timer-container">
+            <div class="timer-content">
+                <div class="timer-title">我們已經在一起</div>
+                <div class="timer-display">
+                    <div class="timer-unit">
+                        <span class="timer-value" id="t-days">0</span>
+                        <span class="timer-label">天</span>
+                    </div>
+                    <div class="timer-separator">:</div>
+                    <div class="timer-unit">
+                        <span class="timer-value" id="t-hours">0</span>
+                        <span class="timer-label">時</span>
+                    </div>
+                    <div class="timer-separator">:</div>
+                    <div class="timer-unit">
+                        <span class="timer-value" id="t-minutes">0</span>
+                        <span class="timer-label">分</span>
+                    </div>
+                    <div class="timer-separator">:</div>
+                    <div class="timer-unit">
+                        <span class="timer-value" id="t-seconds">0</span>
+                        <span class="timer-label">秒</span>
+                    </div>
+                </div>
+                <div class="timer-message"> 我會讓時間一直累積下去 ❤️</div>
+                <button class="timer-restart">重新開始</button>
             </div>
         </div>
     </div>

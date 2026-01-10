@@ -18,8 +18,12 @@ const CONFIG = {
         stage0: '點擊匯聚愛心 ❤️',
         stage1: '再點一次看魔法 ✨',
         stage2: '點擊查看我們的時光 ⏰',
-        stage3: '點擊愛心查看回憶 💕'
+        stage3: '點擊愛心查看回憶 💕',
+        stage4: ''
     },
+
+    // Stage 4: Together Timer
+    startDate: new Date('2020-12-19T00:00:00'),
 
     // V8: Timeline configuration (all points enabled)
     currentVersionIndex: 4, // V8 is the fifth timeline point (index 4)
@@ -41,7 +45,7 @@ const CONFIG = {
         {
             version: 'V6',  // 開放此時間點
             date: new Date('2022-09-24'),
-            title: '住再一起',
+            title: '住在一起',
             description: '',
             image: 'photos/3.jpg'
         },
@@ -87,6 +91,12 @@ const timelineContainer = document.querySelector('.timeline-container');
 const timelinePoints = document.querySelector('.timeline-points');
 const infoModal = document.querySelector('.info-modal');
 const infoClose = document.querySelector('.info-close');
+
+// Stage 4: Timer elements
+const timerContainer = document.querySelector('.timer-container');
+const timerRestart = document.querySelector('.timer-restart');
+const timelineContinue = document.querySelector('.timeline-continue');
+let timerInterval = null;
 
 // ===== Heart SVG Path =====
 const heartPath = 'M23.6,0c-3.4,0-6.3,2.7-7.6,5.6C14.7,2.7,11.8,0,8.4,0C3.8,0,0,3.8,0,8.4c0,9.4,9.5,11.9,16,21.2c6.1-9.3,16-12.1,16-21.2C32,3.8,28.2,0,23.6,0z';
@@ -473,6 +483,88 @@ function closeInfoModal() {
     infoModal.classList.remove('show');
 }
 
+// ===== Stage 4: Timer Functions =====
+function calculateTimeDifference() {
+    const now = new Date();
+    const diff = now - CONFIG.startDate;
+
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+    const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+
+    return { days, hours, minutes, seconds };
+}
+
+function updateTimerDisplay() {
+    const time = calculateTimeDifference();
+
+    document.getElementById('t-days').textContent = time.days;
+    document.getElementById('t-hours').textContent = String(time.hours).padStart(2, '0');
+    document.getElementById('t-minutes').textContent = String(time.minutes).padStart(2, '0');
+    document.getElementById('t-seconds').textContent = String(time.seconds).padStart(2, '0');
+}
+
+function startTimer() {
+    // Initial update
+    updateTimerDisplay();
+
+    // Update every second
+    timerInterval = setInterval(updateTimerDisplay, 1000);
+}
+
+function stopTimer() {
+    if (timerInterval) {
+        clearInterval(timerInterval);
+        timerInterval = null;
+    }
+}
+
+// ===== Stage 4: Enter Timer (Stage 3 → Stage 4) =====
+function enterTimer() {
+    if (isAnimating) return;
+    isAnimating = true;
+
+    // Hide timeline
+    timelineContainer.classList.remove('show');
+
+    setTimeout(() => {
+        currentStage = 4;
+        updateStage();
+        timerContainer.classList.add('show');
+        startTimer();
+        isAnimating = false;
+    }, 600);
+}
+
+// ===== Stage 4: Reset from Timer (Stage 4 → Stage 0) =====
+function resetFromTimer() {
+    if (isAnimating) return;
+    isAnimating = true;
+
+    // Stop timer
+    stopTimer();
+
+    // Hide timer container
+    timerContainer.classList.remove('show');
+
+    // Reset heart position
+    heartWrapper.style.transition = 'all 0.8s ease';
+    heartWrapper.style.transform = '';
+    heartWrapper.style.opacity = '0';
+
+    setTimeout(() => {
+        currentStage = 0;
+        updateStage();
+        initializeSmallHearts();
+
+        // Reset heart styles
+        heartWrapper.style.opacity = '';
+
+        isAnimating = false;
+    }, 800);
+}
+
 // ===== V4: Reset from Timeline (Stage 3 → Stage 0) =====
 function resetFromTimeline() {
     if (isAnimating) return;
@@ -519,6 +611,9 @@ function updateStage() {
         case 3:
             hintText = CONFIG.hints.stage3;
             break;
+        case 4:
+            hintText = CONFIG.hints.stage4;
+            break;
     }
 
     // Fade out, change text, fade in
@@ -549,10 +644,8 @@ function handleClick(e) {
             // Stage 2: Enter timeline
             enterTimeline();
             break;
-        case 3:
-            // Stage 3: Reset from timeline
-            resetFromTimeline();
-            break;
+        // Stage 3 and 4: Handled by specific buttons (continue button, restart button)
+        // No action needed in handleClick
     }
 }
 
@@ -604,6 +697,27 @@ timelineContainer.addEventListener('click', (e) => {
     }
 });
 
+// Click timer restart button to reset (Stage 4)
+timerRestart.addEventListener('click', (e) => {
+    e.stopPropagation();
+    resetFromTimer();
+});
+
+// Click timer container background to reset (Stage 4)
+timerContainer.addEventListener('click', (e) => {
+    if (e.target === timerContainer && currentStage === 4) {
+        resetFromTimer();
+    }
+});
+
+// Click continue button to enter timer (Stage 3 -> Stage 4)
+timelineContinue.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (currentStage === 3) {
+        enterTimer();
+    }
+});
+
 // ===== Keyboard Accessibility =====
 document.addEventListener('keydown', (e) => {
     if (e.key === 'Enter' || e.key === ' ') {
@@ -631,6 +745,6 @@ function init() {
 init();
 
 // ===== Console Easter Egg =====
-console.log('%c❤️ Made with love - V4 Edition', 'color: #ff6b9d; font-size: 20px; font-weight: bold;');
-console.log('%cFour stages of love: Scattered → Gathered → Exploded → Timeline 💕', 'color: #c23866; font-size: 14px;');
+console.log('%c❤️ Made with love - V5 Edition', 'color: #ff6b9d; font-size: 20px; font-weight: bold;');
+console.log('%cFive stages of love: Scattered → Gathered → Exploded → Timeline → Timer 💕', 'color: #c23866; font-size: 14px;');
 
