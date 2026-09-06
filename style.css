@@ -381,11 +381,11 @@ body {
 /* ===== Timeline (GSAP owns container opacity) ===== */
 .timeline-container {
     position: fixed;
-    top: 50%;
+    top: 48%;
     left: 50%;
     transform: translate(-50%, -50%);
     width: 4px;
-    height: 70vh;
+    height: min(70vh, calc(100vh - 11.5rem - env(safe-area-inset-bottom, 0px)));
     opacity: 0;
     pointer-events: none;
     z-index: 20;
@@ -655,7 +655,7 @@ body {
 /* ===== Responsive Timeline ===== */
 @media (max-width: 768px) {
     .timeline-container {
-        height: 60vh;
+        height: min(60vh, calc(100vh - 11rem - env(safe-area-inset-bottom, 0px)));
     }
 
     .timeline-point {
@@ -686,7 +686,7 @@ body {
 
 @media (max-width: 480px) {
     .timeline-container {
-        height: 55vh;
+        height: min(55vh, calc(100vh - 10.5rem - env(safe-area-inset-bottom, 0px)));
     }
 
     .timeline-point {
@@ -728,6 +728,31 @@ body {
     .timeline-continue {
         font-size: 14px;
         padding: 12px 22px;
+    }
+}
+
+@media (max-height: 560px) {
+    .timeline-container {
+        top: 42%;
+        height: calc(100vh - 7.25rem - env(safe-area-inset-bottom, 0px));
+    }
+
+    .timeline-point {
+        width: 32px;
+    }
+
+    .timeline-label {
+        font-size: 12px;
+        left: 56px;
+    }
+
+    .timeline-point.left .timeline-label {
+        right: 56px;
+    }
+
+    .timeline-continue {
+        padding: 10px 20px;
+        font-size: 14px;
     }
 }
 

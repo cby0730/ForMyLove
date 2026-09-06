@@ -180,7 +180,16 @@ function killTransition() {
     }
     gsap.killTweensOf(motionNodes.concat(smallHearts));
     gsap.killTweensOf('.timeline-point-visual');
-    gsap.set(motionNodes, { clearProps: 'transform,opacity,x,y,scale,rotation,filter' });
+    gsap.set([
+        heartWrapper,
+        heartVisual,
+        hintElement,
+        infoContent,
+        timelineContinue,
+        centerGlow,
+        message
+    ], { clearProps: 'transform,opacity,x,y,scale,rotation,filter' });
+    gsap.set([timelineContainer, timerContainer], { clearProps: 'opacity' });
     cancelHintTimeout();
     closeInfoModal(true);
     clearParticles();
