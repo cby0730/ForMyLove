@@ -6,7 +6,9 @@
     --text-color: #333;
     --glow-color: rgba(255, 107, 157, 0.6);
     --message-color: #fff;
-    --transition-smooth: cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-smooth: ease;
+    --font-sans: 'Inter', 'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', 'Hiragino Sans CNS', sans-serif;
+    --font-cjk: 'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', 'Hiragino Sans CNS', 'Inter', sans-serif;
 }
 
 /* ===== Global Reset & Base ===== */
@@ -17,7 +19,7 @@
 }
 
 body {
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-family: var(--font-sans);
     background: var(--bg-color);
     color: var(--text-color);
     overflow: hidden;
@@ -35,19 +37,41 @@ body {
     position: relative;
 }
 
-/* ===== Heart Wrapper ===== */
+/* ===== Center glow (gather) ===== */
+.center-glow {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    width: min(72vw, 420px);
+    height: min(72vw, 420px);
+    transform: translate(-50%, -50%);
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(255, 107, 157, 0.42) 0%, rgba(255, 107, 157, 0) 72%);
+    opacity: 0;
+    pointer-events: none;
+    z-index: 0;
+}
+
+/* ===== Heart Wrapper (GSAP owns transform / opacity) ===== */
 .heart-wrapper {
     position: relative;
     cursor: pointer;
     -webkit-tap-highlight-color: transparent;
+    z-index: 10;
+    pointer-events: none;
 }
 
-/* ===== Heart SVG Styling ===== */
+.heart-visual {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: filter 0.35s ease, transform 0.35s ease;
+}
+
 .heart {
     width: 300px;
     height: auto;
     filter: drop-shadow(0 10px 30px rgba(194, 56, 102, 0.3));
-    transition: all 0.4s var(--transition-smooth);
     animation: breathe 2.5s ease-in-out infinite;
 }
 
@@ -55,20 +79,13 @@ body {
     fill: url(#heartGradient);
 }
 
-/* ===== Hover Effects ===== */
-.heart-wrapper:hover .heart {
+.heart-wrapper:hover .heart-visual {
     filter: drop-shadow(0 15px 40px var(--glow-color));
     transform: scale(1.05);
-    animation: none;
 }
 
-/* ===== Click/Active State ===== */
-.heart-wrapper:active .heart {
-    transform: scale(0.95);
-}
-
-.heart-wrapper.clicked .heart {
-    animation: pulse 0.6s var(--transition-smooth);
+.heart-wrapper:active .heart-visual {
+    transform: scale(0.97);
 }
 
 /* ===== Message Container ===== */
@@ -79,23 +96,28 @@ body {
     transform: translate(-50%, -50%);
     pointer-events: none;
     z-index: 10;
+    width: max-content;
+    max-width: min(82vw, 420px);
 }
 
 .message {
     font-family: 'Great Vibes', cursive;
     font-size: 48px;
     font-weight: 400;
-    white-space: nowrap;
+    white-space: normal;
+    text-align: center;
+    max-width: min(82vw, 420px);
     color: var(--message-color);
     text-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
     opacity: 0;
-    transform: scale(0.8);
-    transition: all 0.4s var(--transition-smooth);
+    line-height: 1.35;
 }
 
-.message.show {
-    opacity: 1;
-    transform: scale(1);
+.message.is-cjk {
+    font-family: var(--font-cjk);
+    font-size: 28px;
+    font-weight: 500;
+    letter-spacing: 0.06em;
 }
 
 /* ===== Particles Container ===== */
@@ -115,17 +137,15 @@ body {
     height: 20px;
     opacity: 0;
     pointer-events: none;
+    will-change: transform, opacity;
 }
 
 .particle svg {
     width: 100%;
     height: 100%;
-    fill: url(#heartGradient);
 }
 
 /* ===== Animations ===== */
-
-/* Breathing Animation */
 @keyframes breathe {
 
     0%,
@@ -138,45 +158,19 @@ body {
     }
 }
 
-/* Pulse Animation (on click) */
-@keyframes pulse {
-    0% {
-        transform: scale(1);
-    }
+@keyframes smallHeartBreathe {
 
-    25% {
-        transform: scale(1.15);
+    0%,
+    100% {
+        transform: scale(1);
     }
 
     50% {
         transform: scale(1.05);
     }
-
-    75% {
-        transform: scale(1.12);
-    }
-
-    100% {
-        transform: scale(1);
-    }
-}
-
-/* Particle Float Animation */
-@keyframes particleFloat {
-    0% {
-        opacity: 1;
-        transform: translate(0, 0) scale(1) rotate(0deg);
-    }
-
-    100% {
-        opacity: 0;
-        transform: translate(var(--tx), var(--ty)) scale(0.3) rotate(180deg);
-    }
 }
 
 /* ===== Responsive Design ===== */
-
-/* Tablet */
 @media (max-width: 768px) {
     .heart {
         width: 240px;
@@ -186,13 +180,16 @@ body {
         font-size: 36px;
     }
 
+    .message.is-cjk {
+        font-size: 24px;
+    }
+
     .particle {
         width: 16px;
         height: 16px;
     }
 }
 
-/* Mobile */
 @media (max-width: 480px) {
     .heart {
         width: 200px;
@@ -202,13 +199,16 @@ body {
         font-size: 32px;
     }
 
+    .message.is-cjk {
+        font-size: 22px;
+    }
+
     .particle {
         width: 14px;
         height: 14px;
     }
 }
 
-/* Small Mobile */
 @media (max-width: 360px) {
     .heart {
         width: 160px;
@@ -217,16 +217,9 @@ body {
     .message {
         font-size: 24px;
     }
-}
 
-/* ===== Accessibility ===== */
-@media (prefers-reduced-motion: reduce) {
-
-    .heart,
-    .message,
-    .particle {
-        animation: none !important;
-        transition: none !important;
+    .message.is-cjk {
+        font-size: 18px;
     }
 }
 
@@ -238,36 +231,21 @@ body {
     }
 }
 
-/* ===== Ripple Effect ===== */
+/* ===== Ripple (single ring, scale only) ===== */
 .ripple {
     position: fixed;
     top: 50%;
     left: 50%;
-    transform: translate(-50%, -50%);
-    width: 0;
-    height: 0;
+    width: 40px;
+    height: 40px;
+    margin: -20px 0 0 -20px;
     border-radius: 50%;
     background: radial-gradient(circle, rgba(255, 107, 157, 0.4) 0%, rgba(255, 107, 157, 0) 70%);
-    z-index: -1;
+    z-index: 2;
     pointer-events: none;
-    animation: rippleExpand 2s ease-out forwards;
 }
 
-@keyframes rippleExpand {
-    0% {
-        width: 0;
-        height: 0;
-        opacity: 0.8;
-    }
-
-    100% {
-        width: 250vmax;
-        height: 250vmax;
-        opacity: 0;
-    }
-}
-
-/* ===== Small Hearts Container ===== */
+/* ===== Small Hearts ===== */
 .small-hearts-container {
     position: fixed;
     top: 0;
@@ -284,92 +262,34 @@ body {
     height: auto;
     cursor: pointer;
     pointer-events: auto;
-    filter: drop-shadow(0 4px 12px rgba(194, 56, 102, 0.3));
-    animation: smallHeartBreathe 2s ease-in-out infinite;
-    transition: all 0.3s var(--transition-smooth);
-    opacity: 1;
 }
 
-.small-heart:hover {
+.small-heart-visual {
+    width: 100%;
+    transition: filter 0.3s ease;
+}
+
+.small-heart:hover .small-heart-visual {
     transform: scale(1.1);
     filter: drop-shadow(0 6px 16px rgba(194, 56, 102, 0.5));
 }
 
-.small-heart svg {
+.small-heart-svg {
     width: 100%;
-    height: 100%;
+    height: auto;
+    display: block;
+    filter: drop-shadow(0 4px 12px rgba(194, 56, 102, 0.3));
+    animation: smallHeartBreathe 2s ease-in-out infinite;
 }
 
-.small-heart path {
-    fill: url(#heartGradient);
+.small-heart.is-gathering {
+    filter: drop-shadow(0 0 16px rgba(255, 107, 157, 0.85));
 }
 
-/* Small heart breathing animation */
-@keyframes smallHeartBreathe {
-
-    0%,
-    100% {
-        transform: scale(1);
-    }
-
-    50% {
-        transform: scale(1.05);
-    }
-}
-
-/* Gathering animation with trail */
-@keyframes gatherToCenter {
-    0% {
-        opacity: 1;
-    }
-
-    70% {
-        opacity: 0.8;
-    }
-
-    100% {
-        opacity: 0;
-        transform: translate(var(--gather-x), var(--gather-y)) scale(0.3);
-    }
-}
-
-/* Trail effect for gathering */
-.small-heart.gathering {
-    animation: none;
-    filter: drop-shadow(0 0 20px rgba(255, 107, 157, 0.8));
-}
-
-.small-heart.gathering::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: radial-gradient(circle, rgba(255, 107, 157, 0.6) 0%, transparent 70%);
-    border-radius: 50%;
-    opacity: 0.6;
-    animation: trailPulse 0.5s ease-out infinite;
-}
-
-@keyframes trailPulse {
-
-    0%,
-    100% {
-        transform: scale(1);
-        opacity: 0.6;
-    }
-
-    50% {
-        transform: scale(1.5);
-        opacity: 0.3;
-    }
-}
-
-/* ===== Hint Container ===== */
+/* ===== Hint (GSAP owns opacity / y) ===== */
 .hint-container {
     position: fixed;
-    bottom: 60px;
+    bottom: calc(60px + env(safe-area-inset-bottom, 0px));
     left: 50%;
     transform: translateX(-50%);
     z-index: 100;
@@ -377,7 +297,7 @@ body {
 }
 
 .hint {
-    font-family: 'Inter', sans-serif;
+    font-family: var(--font-cjk);
     font-size: 18px;
     font-weight: 400;
     color: var(--heart-color-start);
@@ -386,19 +306,11 @@ body {
     border-radius: 30px;
     box-shadow: 0 4px 20px rgba(194, 56, 102, 0.2);
     opacity: 0;
-    transform: translateY(10px);
-    transition: all 0.4s var(--transition-smooth);
     white-space: nowrap;
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
 }
 
-.hint.show {
-    opacity: 1;
-    transform: translateY(0);
-}
-
-/* Dark mode hint styling */
 @media (prefers-color-scheme: dark) {
     .hint {
         background: rgba(42, 42, 42, 0.95);
@@ -407,34 +319,34 @@ body {
     }
 }
 
-/* ===== Stage-based Visibility ===== */
-/* Stage 0: Scattered small hearts */
-.stage-0 .heart-wrapper {
-    opacity: 0;
-    pointer-events: none;
-    transform: scale(0.5);
-}
-
+/* ===== Stage classes: pointer-events / mounting only ===== */
 .stage-0 .small-hearts-container {
-    opacity: 1;
     pointer-events: auto;
 }
 
-/* Stage 1: Big heart visible */
-.stage-1 .heart-wrapper {
-    opacity: 1;
-    pointer-events: auto;
-    transform: scale(1);
-}
-
-.stage-1 .small-hearts-container {
-    opacity: 0;
-    pointer-events: none;
-}
-
-/* Stage 2: Explosion effects */
+.stage-1 .heart-wrapper,
 .stage-2 .heart-wrapper {
-    opacity: 1;
+    pointer-events: auto;
+}
+
+.stage-3 .timeline-backdrop {
+    pointer-events: auto;
+}
+
+.stage-3 .timeline-container {
+    pointer-events: auto;
+}
+
+.stage-3 .timeline-continue {
+    pointer-events: auto;
+}
+
+.stage-3 .hint-container,
+.stage-4 .hint-container {
+    visibility: hidden;
+}
+
+.stage-4 .timer-container {
     pointer-events: auto;
 }
 
@@ -446,7 +358,7 @@ body {
     }
 
     .hint-container {
-        bottom: 40px;
+        bottom: calc(40px + env(safe-area-inset-bottom, 0px));
     }
 }
 
@@ -457,33 +369,36 @@ body {
     }
 }
 
-/* ===== V4: Timeline Container ===== */
+/* ===== Timeline backdrop (Stage 3 reset hit area) ===== */
+.timeline-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 18;
+    pointer-events: none;
+    background: transparent;
+}
+
+/* ===== Timeline (GSAP owns container opacity) ===== */
 .timeline-container {
     position: fixed;
-    top: 50%;
+    top: 48%;
     left: 50%;
     transform: translate(-50%, -50%);
     width: 4px;
-    height: 70vh;
+    height: min(70vh, calc(100vh - 11.5rem - env(safe-area-inset-bottom, 0px)));
     opacity: 0;
     pointer-events: none;
-    transition: opacity 0.8s ease;
     z-index: 20;
 }
 
-.timeline-container.show {
-    opacity: 1;
-    pointer-events: auto;
-}
-
-/* 垂直時間軸線條 */
 .timeline-line {
     position: absolute;
     top: 0;
     left: 50%;
-    transform: translateX(-50%);
     width: 4px;
     height: 100%;
+    margin-left: -2px;
+    transform-origin: top center;
     background: linear-gradient(180deg,
             var(--heart-color-start) 0%,
             var(--heart-color-end) 100%);
@@ -491,61 +406,50 @@ body {
     box-shadow: 0 0 15px rgba(255, 107, 157, 0.5);
 }
 
-/* 時間點容器 */
 .timeline-points {
     position: relative;
     width: 100%;
     height: 100%;
 }
 
-/* 時間點（愛心） */
 .timeline-point {
     position: absolute;
     left: 50%;
     transform: translate(-50%, -50%);
-    /* 水平和垂直都居中 */
     cursor: pointer;
-    transition: all 0.3s var(--transition-smooth);
     width: 50px;
     height: auto;
-    filter: drop-shadow(0 4px 12px rgba(194, 56, 102, 0.4));
 }
 
-.timeline-point:hover {
-    transform: translate(-50%, -50%) scale(1.2);
-    /* 保持居中，只放大 */
+.timeline-point-visual {
+    width: 100%;
+    filter: drop-shadow(0 4px 12px rgba(194, 56, 102, 0.4));
+    transition: filter 0.3s ease;
+}
+
+.timeline-point:hover .timeline-point-visual {
     filter: drop-shadow(0 6px 20px rgba(255, 107, 157, 0.8));
+    transform: scale(1.2);
 }
 
 .timeline-point svg {
     width: 100%;
-    height: 100%;
+    height: auto;
+    display: block;
 }
 
-/* 禁用狀態的時間點 */
 .timeline-point.disabled {
     opacity: 0.4;
     cursor: not-allowed;
     pointer-events: none;
 }
 
-.timeline-point.disabled:hover {
-    transform: translate(-50%, -50%);
-    /* 禁用hover放大效果 */
-    filter: drop-shadow(0 4px 12px rgba(194, 56, 102, 0.4));
-    /* 保持原陰影 */
-}
-
-.timeline-point.disabled .timeline-label {
-    opacity: 0.6;
-}
-
-/* 時間點標籤（版本號）*/
 .timeline-label {
     position: absolute;
     top: 50%;
     left: 80px;
     transform: translateY(-50%);
+    font-family: var(--font-cjk);
     font-size: 16px;
     font-weight: 600;
     color: var(--heart-color-start);
@@ -554,13 +458,12 @@ body {
     text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
-/* 左側時間點的標籤 */
 .timeline-point.left .timeline-label {
     left: auto;
     right: 80px;
 }
 
-/* ===== V4: Info Modal (對話框) ===== */
+/* ===== Info Modal ===== */
 .info-modal {
     position: fixed;
     top: 0;
@@ -575,7 +478,6 @@ body {
     justify-content: center;
     opacity: 0;
     pointer-events: none;
-    transition: opacity 0.4s ease;
     z-index: 1000;
 }
 
@@ -594,12 +496,38 @@ body {
     width: 90%;
     box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
     position: relative;
-    transform: scale(0.7) translateY(30px);
-    transition: all 0.4s var(--transition-smooth);
+    overflow: hidden;
 }
 
-.info-modal.show .info-content {
-    transform: scale(1) translateY(0);
+.info-content.theme-blush {
+    box-shadow: 0 20px 70px rgba(255, 107, 157, 0.42), 0 0 40px rgba(255, 107, 157, 0.18);
+}
+
+.info-content.theme-gold {
+    box-shadow: 0 20px 70px rgba(212, 175, 55, 0.46), 0 0 42px rgba(212, 175, 55, 0.22);
+}
+
+.info-content.theme-warm {
+    box-shadow: 0 20px 70px rgba(232, 140, 90, 0.4), 0 0 40px rgba(232, 140, 90, 0.18);
+}
+
+.modal-confetti {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    pointer-events: none;
+    border-radius: inherit;
+    z-index: 2;
+}
+
+.confetti-piece {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 7px;
+    height: 11px;
+    border-radius: 1px;
+    will-change: transform, opacity;
 }
 
 .info-close {
@@ -615,16 +543,16 @@ body {
     line-height: 1;
     cursor: pointer;
     color: #666;
-    transition: all 0.3s ease;
+    transition: background 0.3s ease, color 0.3s ease;
     display: flex;
     align-items: center;
     justify-content: center;
+    z-index: 3;
 }
 
 .info-close:hover {
     background: var(--heart-color-start);
     color: white;
-    transform: rotate(90deg);
 }
 
 .info-image-container {
@@ -634,6 +562,8 @@ body {
     overflow: hidden;
     margin-bottom: 20px;
     background: #f0f0f0;
+    position: relative;
+    z-index: 1;
 }
 
 .info-image {
@@ -644,17 +574,20 @@ body {
 
 .info-details {
     text-align: center;
+    position: relative;
+    z-index: 1;
 }
 
 .info-title {
-    font-family: 'Great Vibes', cursive;
-    font-size: 36px;
-    font-weight: 400;
+    font-family: var(--font-cjk);
+    font-size: 32px;
+    font-weight: 600;
     color: var(--heart-color-start);
     margin: 0 0 10px 0;
 }
 
 .info-date {
+    font-family: var(--font-cjk);
     font-size: 14px;
     color: #999;
     margin: 0 0 15px 0;
@@ -663,13 +596,13 @@ body {
 }
 
 .info-description {
-    font-size: 18px;
+    font-family: var(--font-cjk);
+    font-size: 16px;
     color: var(--text-color);
-    line-height: 1.6;
+    line-height: 1.7;
     margin: 0;
 }
 
-/* Dark mode for info modal */
 @media (prefers-color-scheme: dark) {
     .info-content {
         background: rgba(42, 42, 42, 0.98);
@@ -686,30 +619,13 @@ body {
     }
 }
 
-/* ===== V4: Stage 3 Control ===== */
-/* Stage 3: Timeline visible, big heart hidden */
-.stage-3 .timeline-container {
-    opacity: 1;
-    pointer-events: auto;
-}
-
-.stage-3 .heart-wrapper {
-    /* Heart moved to timeline, hide from center */
-    pointer-events: auto;
-}
-
-.stage-3 .hint {
-    opacity: 0;
-    display: none;
-}
-
-/* ===== Timeline Continue Button ===== */
+/* ===== Continue button: fixed + safe area (not clipped) ===== */
 .timeline-continue {
-    position: absolute;
-    bottom: -100px;
+    position: fixed;
     left: 50%;
+    bottom: calc(20px + env(safe-area-inset-bottom, 0px));
     transform: translateX(-50%);
-    font-family: 'Inter', sans-serif;
+    font-family: var(--font-cjk);
     font-size: 16px;
     font-weight: 500;
     color: white;
@@ -718,38 +634,28 @@ body {
     padding: 15px 30px;
     border-radius: 30px;
     cursor: pointer;
-    transition: all 0.3s ease;
     box-shadow: 0 4px 20px rgba(194, 56, 102, 0.3);
-    white-space: nowrap;
+    white-space: normal;
+    text-align: center;
+    max-width: calc(100vw - 32px);
     opacity: 0;
-    animation: fadeInUp 0.6s ease 0.8s forwards;
-}
-
-@keyframes fadeInUp {
-    from {
-        opacity: 0;
-        transform: translateX(-50%) translateY(20px);
-    }
-
-    to {
-        opacity: 1;
-        transform: translateX(-50%) translateY(0);
-    }
+    pointer-events: none;
+    z-index: 25;
 }
 
 .timeline-continue:hover {
-    transform: translateX(-50%) translateY(-3px);
-    box-shadow: 0 8px 30px rgba(194, 56, 102, 0.4);
+    box-shadow: 0 8px 30px rgba(194, 56, 102, 0.45);
+    filter: brightness(1.05);
 }
 
 .timeline-continue:active {
-    transform: translateX(-50%) translateY(0);
+    filter: brightness(0.96);
 }
 
-/* ===== V4: Responsive Timeline ===== */
+/* ===== Responsive Timeline ===== */
 @media (max-width: 768px) {
     .timeline-container {
-        height: 60vh;
+        height: min(60vh, calc(100vh - 11rem - env(safe-area-inset-bottom, 0px)));
     }
 
     .timeline-point {
@@ -770,17 +676,17 @@ body {
     }
 
     .info-title {
-        font-size: 30px;
+        font-size: 28px;
     }
 
     .info-description {
-        font-size: 16px;
+        font-size: 15px;
     }
 }
 
 @media (max-width: 480px) {
     .timeline-container {
-        height: 55vh;
+        height: min(55vh, calc(100vh - 10.5rem - env(safe-area-inset-bottom, 0px)));
     }
 
     .timeline-point {
@@ -802,7 +708,7 @@ body {
     }
 
     .info-title {
-        font-size: 26px;
+        font-size: 24px;
     }
 
     .info-date {
@@ -810,7 +716,7 @@ body {
     }
 
     .info-description {
-        font-size: 15px;
+        font-size: 14px;
     }
 
     .info-close {
@@ -818,9 +724,39 @@ body {
         height: 35px;
         font-size: 24px;
     }
+
+    .timeline-continue {
+        font-size: 14px;
+        padding: 12px 22px;
+    }
 }
 
-/* ===== V4: Timer Container (Stage 4) ===== */
+@media (max-height: 560px) {
+    .timeline-container {
+        top: 42%;
+        height: calc(100vh - 7.25rem - env(safe-area-inset-bottom, 0px));
+    }
+
+    .timeline-point {
+        width: 32px;
+    }
+
+    .timeline-label {
+        font-size: 12px;
+        left: 56px;
+    }
+
+    .timeline-point.left .timeline-label {
+        right: 56px;
+    }
+
+    .timeline-continue {
+        padding: 10px 20px;
+        font-size: 14px;
+    }
+}
+
+/* ===== Timer (GSAP owns container opacity) ===== */
 .timer-container {
     position: fixed;
     top: 0;
@@ -832,36 +768,19 @@ body {
     justify-content: center;
     opacity: 0;
     pointer-events: none;
-    transition: opacity 0.8s ease;
     z-index: 50;
     background: var(--bg-color);
 }
 
-.timer-container.show {
-    opacity: 1;
-    pointer-events: auto;
-}
-
 .timer-content {
     text-align: center;
-    animation: timerFadeIn 1.2s ease-out;
-}
-
-@keyframes timerFadeIn {
-    0% {
-        opacity: 0;
-        transform: translateY(30px);
-    }
-
-    100% {
-        opacity: 1;
-        transform: translateY(0);
-    }
+    padding: 0 16px;
 }
 
 .timer-title {
-    font-family: 'Great Vibes', cursive;
-    font-size: 48px;
+    font-family: var(--font-cjk);
+    font-size: 40px;
+    font-weight: 600;
     color: var(--heart-color-start);
     margin-bottom: 40px;
     text-shadow: 0 2px 10px rgba(255, 107, 157, 0.3);
@@ -895,12 +814,11 @@ body {
 }
 
 .timer-label {
-    font-family: 'Inter', sans-serif;
+    font-family: var(--font-cjk);
     font-size: 16px;
     font-weight: 500;
     color: #999;
     margin-top: 8px;
-    text-transform: uppercase;
     letter-spacing: 2px;
 }
 
@@ -913,7 +831,7 @@ body {
 }
 
 .timer-message {
-    font-family: 'Inter', sans-serif;
+    font-family: var(--font-cjk);
     font-size: 20px;
     color: var(--text-color);
     margin-bottom: 50px;
@@ -921,7 +839,7 @@ body {
 }
 
 .timer-restart {
-    font-family: 'Inter', sans-serif;
+    font-family: var(--font-cjk);
     font-size: 16px;
     font-weight: 500;
     color: white;
@@ -930,44 +848,22 @@ body {
     padding: 15px 40px;
     border-radius: 30px;
     cursor: pointer;
-    transition: all 0.3s ease;
+    transition: box-shadow 0.3s ease, filter 0.3s ease;
     box-shadow: 0 4px 20px rgba(194, 56, 102, 0.3);
 }
 
 .timer-restart:hover {
-    transform: translateY(-3px);
     box-shadow: 0 8px 30px rgba(194, 56, 102, 0.4);
+    filter: brightness(1.05);
 }
 
 .timer-restart:active {
-    transform: translateY(0);
+    filter: brightness(0.96);
 }
 
-/* ===== Stage 4 Visibility Control ===== */
-.stage-4 .timer-container {
-    opacity: 1;
-    pointer-events: auto;
-}
-
-.stage-4 .timeline-container {
-    opacity: 0;
-    pointer-events: none;
-}
-
-.stage-4 .heart-wrapper {
-    opacity: 0;
-    pointer-events: none;
-}
-
-.stage-4 .hint {
-    opacity: 0;
-    display: none;
-}
-
-/* ===== Timer Responsive Design ===== */
 @media (max-width: 768px) {
     .timer-title {
-        font-size: 36px;
+        font-size: 32px;
         margin-bottom: 30px;
     }
 
@@ -1000,7 +896,7 @@ body {
 
 @media (max-width: 480px) {
     .timer-title {
-        font-size: 28px;
+        font-size: 26px;
         margin-bottom: 25px;
     }
 
@@ -1035,5 +931,33 @@ body {
     .timer-restart {
         font-size: 14px;
         padding: 12px 30px;
+    }
+}
+
+/* ===== Reduced motion ===== */
+@media (prefers-reduced-motion: reduce) {
+
+    .heart,
+    .heart-visual,
+    .message,
+    .particle,
+    .small-heart,
+    .small-heart-visual,
+    .small-heart-svg,
+    .ripple,
+    .hint,
+    .timeline-continue,
+    .timer-content,
+    .info-content,
+    .timeline-point-visual,
+    .center-glow {
+        animation: none !important;
+        transition: none !important;
+    }
+
+    .heart-wrapper:hover .heart-visual,
+    .small-heart:hover .small-heart-visual,
+    .timeline-point:hover .timeline-point-visual {
+        transform: none;
     }
 }
