@@ -12,7 +12,6 @@ const CONFIG = {
     messageDuration: 2,
     gatherDuration: 0.85,
     gatherStagger: 0.04,
-    currentVersionIndex: 4,
     hints: {
         0: '點擊匯聚愛心 ❤️',
         1: '再點一次看魔法 ✨',
@@ -39,12 +38,7 @@ function formatDate(date) {
 }
 
 function targetMemoryIndex() {
-    const byId = CONTENT.memories.findIndex((item) => item.id === 'wedding');
-    if (byId >= 0) return byId;
-    if (CONFIG.currentVersionIndex < CONTENT.memories.length) {
-        return CONFIG.currentVersionIndex;
-    }
-    return CONTENT.memories.length - 1;
+    return Math.max(0, CONTENT.memories.length - 1);
 }
 
 // ===== State =====

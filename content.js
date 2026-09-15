@@ -40,6 +40,14 @@ window.CONTENT = {
             body: '從喜歡到承諾一生，我會用盡全力陪妳走到最後',
             image: 'photos/5.jpg',
             theme: 'gold'
+        },
+        {
+            id: 'abroad',
+            date: '2025-06-18T00:00:00',
+            title: '一起出國',
+            body: '雖然妳會擔心出去玩，但我會讓妳的擔心飛走',
+            image: 'photos/6.jpg',
+            theme: 'blush'
         }
     ],
     messages: [
