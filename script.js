@@ -155,16 +155,39 @@ function stopTimer() {
     }
 }
 
-function preloadMemoryImages() {
+function preloadImage(src, highPriority) {
+    if (!src) return null;
+    const cached = memoryImageCache.get(src);
+    if (cached) return cached;
+    const img = new Image();
+    img.decoding = 'async';
+    if (highPriority) img.fetchPriority = 'high';
+    img.src = src;
+    memoryImageCache.set(src, img);
+    if (typeof img.decode === 'function') {
+        img.decode().catch(() => {});
+    }
+    return img;
+}
+
+function preloadFonts() {
+    if (!document.fonts || !document.fonts.load) return Promise.resolve();
+    return Promise.all([
+        '400 48px "Great Vibes"',
+        '300 16px Inter',
+        '400 16px Inter',
+        '600 16px Inter',
+        '400 16px "Noto Sans TC"',
+        '500 16px "Noto Sans TC"',
+        '600 32px "Noto Sans TC"'
+    ].map((face) => document.fonts.load(face).catch(() => [])));
+}
+
+function preloadSiteAssets() {
     CONTENT.memories.forEach((memory, index) => {
-        const src = memory.image;
-        if (!src || memoryImageCache.has(src)) return;
-        const img = new Image();
-        img.decoding = 'async';
-        if (index === 0) img.fetchPriority = 'high';
-        img.src = src;
-        memoryImageCache.set(src, img);
+        preloadImage(memory.image, index === 0);
     });
+    preloadFonts();
 }
 
 function revealModalImage(image, session) {
@@ -995,7 +1018,7 @@ window.addEventListener('orientationchange', onViewportChange);
 // ===== Init =====
 function init() {
     applyContent();
-    preloadMemoryImages();
+    preloadSiteAssets();
     currentStage = 0;
     applyStageClass();
     snapIdleStageVisuals();
