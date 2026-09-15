@@ -7,8 +7,8 @@
     --glow-color: rgba(255, 107, 157, 0.6);
     --message-color: #fff;
     --transition-smooth: ease;
-    --font-sans: 'Inter', 'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', 'Hiragino Sans CNS', sans-serif;
-    --font-cjk: 'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', 'Hiragino Sans CNS', 'Inter', sans-serif;
+    --font-sans: '標楷體', 'DFKai-SB', 'BiauKai', 'TW-Kai', 'KaiTi', '楷体', 'LXGW WenKai TC', serif;
+    --font-cjk: '標楷體', 'DFKai-SB', 'BiauKai', 'TW-Kai', 'KaiTi', '楷体', 'LXGW WenKai TC', serif;
 }
 
 /* ===== Global Reset & Base ===== */
@@ -23,8 +23,8 @@ body {
     background: var(--bg-color);
     color: var(--text-color);
     overflow: hidden;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
+    -webkit-font-smoothing: auto;
+    -moz-osx-font-smoothing: auto;
 }
 
 /* ===== Container Layout ===== */
@@ -101,8 +101,8 @@ body {
 }
 
 .message {
-    font-family: 'Great Vibes', cursive;
-    font-size: 48px;
+    font-family: var(--font-cjk);
+    font-size: 36px;
     font-weight: 400;
     white-space: normal;
     text-align: center;
@@ -110,14 +110,14 @@ body {
     color: var(--message-color);
     text-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
     opacity: 0;
-    line-height: 1.35;
+    line-height: 1.45;
+    letter-spacing: 0.08em;
 }
 
 .message.is-cjk {
-    font-family: var(--font-cjk);
     font-size: 28px;
-    font-weight: 500;
-    letter-spacing: 0.06em;
+    font-weight: 400;
+    letter-spacing: 0.12em;
 }
 
 /* ===== Particles Container ===== */
@@ -807,7 +807,7 @@ body {
 }
 
 .timer-value {
-    font-family: 'Inter', sans-serif;
+    font-family: var(--font-cjk);
     font-size: 72px;
     font-weight: 600;
     color: var(--heart-color-end);

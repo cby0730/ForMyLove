@@ -173,13 +173,11 @@ function preloadImage(src, highPriority) {
 function preloadFonts() {
     if (!document.fonts || !document.fonts.load) return Promise.resolve();
     return Promise.all([
-        '400 48px "Great Vibes"',
-        '300 16px Inter',
-        '400 16px Inter',
-        '600 16px Inter',
-        '400 16px "Noto Sans TC"',
-        '500 16px "Noto Sans TC"',
-        '600 32px "Noto Sans TC"'
+        '400 48px "標楷體"',
+        '400 48px "DFKai-SB"',
+        '400 48px "BiauKai"',
+        '400 16px "LXGW WenKai TC"',
+        '700 32px "LXGW WenKai TC"'
     ].map((face) => document.fonts.load(face).catch(() => [])));
 }
 
