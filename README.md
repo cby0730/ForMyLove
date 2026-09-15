@@ -31,12 +31,13 @@
 #### V4/V5/V6/V7/V8 版本（時間軸模式）⭐ 最新
 - 📅 **垂直時間軸** - 展示我們一起的重要時刻，5個時間點全部開放
 - 💑 **回憶展示** - 每個時間點包含日期、標題、照片和描述
-- 🎯 **精確動畫** - 大愛心縮小並精確移動到當前版本的時間點
-- 💬 **毛玻璃對話框** - 現代美學的資訊展示方式
+- 🎯 **量測飛入** - 大愛心沿弧線縮小，對準「結婚」那一顆後再對換
+- 💬 **毛玻璃對話框** - 標題／日期／內文交錯淡入；結婚回憶有金色碎紙
 - 🏷️ **智慧標籤** - 啟用的時間點顯示日期
-- 🔄 **完整循環** - 點擊時間軸背景可重新開始體驗
-- 📱 **響應式時間軸** - 完美適配所有裝置尺寸
-- 🎊 **5個重要時刻** - 在一起、一起的手環、住再一起、米漿/小貓、結婚
+- 🔄 **完整循環** - 點擊時間軸背景可重新開始（彈窗開啟時不會重來）
+- 📱 **響應式時間軸** - 繼續鈕避開 home indicator；旋轉後會重算對齊
+- 🎊 **5個重要時刻** - 在一起、一起的手環、住在一起、米漿/小貓、結婚
+- ✨ **GSAP 轉場** - 弧線匯聚、重力愛心爆炸、訊息池（同句不連抽）
 
 
 ### 🎨 設計亮點
@@ -89,10 +90,37 @@ git checkout main
 ForMyLove/
 ├── index.html          # HTML 主檔案
 ├── style.css           # CSS 樣式表
-├── script.js           # JavaScript 互動邏輯
+├── content.js          # 文案、日期、照片（只改這裡）
+├── script.js           # 五階段互動與 GSAP 轉場
+├── photos/             # 回憶照片（結婚檔名為 5.jpg）
 ├── README.md           # 專案說明（本文檔）
 └── develop.md          # 開發文檔
 ```
+
+---
+
+## ✏️ 如何改文案
+
+之後換真實故事，**只需要編輯 `content.js`**。`script.js` 只讀 `window.CONTENT`。
+
+```js
+window.CONTENT = {
+  memories: [
+    { id, date: '2020-12-19T00:00:00', title, body, image, theme }
+  ],
+  messages: ['I love You', '謝謝妳成為我的家'],
+  timer: {
+    title: '我們已經在一起',
+    footer: '我會讓時間一直累積下去 ❤️',
+    start: '2020-12-19T00:00:00'
+  }
+};
+```
+
+- `date` / `timer.start` 請用 `YYYY-MM-DDTHH:mm:ss`（本地午夜，不要只寫 `YYYY-MM-DD`）。
+- `theme` 可填 `blush` / `gold` / `warm`，只影響彈窗光暈；`gold` 會在結婚彈窗撒金色碎紙。
+- Stage 2 爆炸句從 `messages` 隨機抽，同一句不會連著出現。
+- 中文訊息會自動換行，不必依賴 Great Vibes。
 
 ---
 
@@ -114,10 +142,15 @@ ForMyLove/
 ## 💻 技術棧
 
 - **HTML5** - 語意化標籤
-- **CSS3** - 變數、動畫、漸層、毛玻璃效果
-- **Vanilla JavaScript** - 無框架，純原生 JS
+- **CSS3** - 變數、閒置呼吸、漸層、毛玻璃效果
+- **Vanilla JavaScript** - 無框架、無建置；經典全域腳本
+- **GSAP 3** - 只載入 `gsap.min.js`（CDN），主導階段轉場，可中斷
 - **SVG** - 向量圖形（愛心形狀）
-- **Google Fonts** - Inter + Great Vibes 字型
+- **Google Fonts** - Inter + Noto Sans TC + Great Vibes
+
+載入順序：GSAP → `content.js` → `script.js`。
+
+減少動態（`prefers-reduced-motion`）時會關掉粒子／彩碎，改為瞬間切換階段，故事仍可走完。
 
 ---
 
