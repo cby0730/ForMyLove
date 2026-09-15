@@ -57,6 +57,7 @@ let resizeTimer = null;
 let timerInterval = null;
 let lastMessageIndex = -1;
 let modalSession = 0;
+const memoryImageCache = new Map();
 
 // ===== DOM =====
 const container = document.querySelector('.container');
@@ -154,6 +155,43 @@ function stopTimer() {
     }
 }
 
+function preloadMemoryImages() {
+    CONTENT.memories.forEach((memory, index) => {
+        const src = memory.image;
+        if (!src || memoryImageCache.has(src)) return;
+        const img = new Image();
+        img.decoding = 'async';
+        if (index === 0) img.fetchPriority = 'high';
+        img.src = src;
+        memoryImageCache.set(src, img);
+    });
+}
+
+function revealModalImage(image, session) {
+    if (session !== modalSession) return;
+    image.classList.add('is-ready');
+}
+
+function applyModalImage(image, src, session) {
+    image.onload = null;
+    image.onerror = null;
+    image.classList.remove('is-ready');
+
+    if (image.getAttribute('src') === src && image.complete && image.naturalWidth > 0) {
+        revealModalImage(image, session);
+        return;
+    }
+
+    const reveal = () => revealModalImage(image, session);
+    image.addEventListener('load', reveal, { once: true });
+    image.addEventListener('error', reveal, { once: true });
+    image.src = src;
+
+    if (image.complete && image.naturalWidth > 0) {
+        reveal();
+    }
+}
+
 function modalFields() {
     return {
         image: infoModal.querySelector('.info-image'),
@@ -168,8 +206,6 @@ function clearModalImage() {
     if (!image) return;
     image.onload = null;
     image.onerror = null;
-    image.removeAttribute('src');
-    image.alt = '';
     image.classList.remove('is-ready');
 }
 
@@ -746,10 +782,6 @@ function showInfoModal(data, pointEl) {
     gsap.killTweensOf([infoContent, image, title, date, description]);
     clearWeddingConfetti();
 
-    image.onload = null;
-    image.onerror = null;
-    image.classList.remove('is-ready');
-    image.removeAttribute('src');
     image.alt = data.title;
     title.textContent = data.title;
     date.textContent = formatDate(parseLocalDate(data.date));
@@ -758,15 +790,7 @@ function showInfoModal(data, pointEl) {
     infoContent.classList.remove('theme-blush', 'theme-gold', 'theme-warm');
     if (data.theme) infoContent.classList.add(`theme-${data.theme}`);
     infoModal.classList.add('show');
-
-    const revealImage = () => {
-        if (session !== modalSession) return;
-        image.classList.add('is-ready');
-    };
-    image.addEventListener('load', revealImage, { once: true });
-    image.addEventListener('error', revealImage, { once: true });
-    image.src = data.image;
-    if (image.complete && image.naturalWidth > 0) revealImage();
+    applyModalImage(image, data.image, session);
 
     if (prefersReduced()) {
         gsap.set(infoContent, { opacity: 1, scale: 1, y: 0 });
@@ -971,6 +995,7 @@ window.addEventListener('orientationchange', onViewportChange);
 // ===== Init =====
 function init() {
     applyContent();
+    preloadMemoryImages();
     currentStage = 0;
     applyStageClass();
     snapIdleStageVisuals();
