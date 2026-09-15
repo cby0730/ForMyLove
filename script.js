@@ -56,6 +56,7 @@ let hintTimeout = null;
 let resizeTimer = null;
 let timerInterval = null;
 let lastMessageIndex = -1;
+let modalSession = 0;
 
 // ===== DOM =====
 const container = document.querySelector('.container');
@@ -153,9 +154,32 @@ function stopTimer() {
     }
 }
 
+function modalFields() {
+    return {
+        image: infoModal.querySelector('.info-image'),
+        title: infoModal.querySelector('.info-title'),
+        date: infoModal.querySelector('.info-date'),
+        description: infoModal.querySelector('.info-description')
+    };
+}
+
+function clearModalImage() {
+    const { image } = modalFields();
+    if (!image) return;
+    image.onload = null;
+    image.onerror = null;
+    image.removeAttribute('src');
+    image.alt = '';
+    image.classList.remove('is-ready');
+}
+
 function closeInfoModal(immediate) {
+    const { image, title, date, description } = modalFields();
+    modalSession += 1;
+    gsap.killTweensOf([infoContent, image, title, date, description]);
     clearWeddingConfetti();
     infoContent.classList.remove('theme-blush', 'theme-gold', 'theme-warm');
+    clearModalImage();
     if (immediate || prefersReduced() || !infoModal.classList.contains('show')) {
         infoModal.classList.remove('show');
         gsap.set(infoContent, { clearProps: 'transform,opacity,x,y,scale' });
@@ -715,12 +739,17 @@ function spawnWeddingConfetti() {
 }
 
 function showInfoModal(data, pointEl) {
-    const image = infoModal.querySelector('.info-image');
-    const title = infoModal.querySelector('.info-title');
-    const date = infoModal.querySelector('.info-date');
-    const description = infoModal.querySelector('.info-description');
+    const { image, title, date, description } = modalFields();
+    const session = modalSession + 1;
+    modalSession = session;
 
-    image.src = data.image;
+    gsap.killTweensOf([infoContent, image, title, date, description]);
+    clearWeddingConfetti();
+
+    image.onload = null;
+    image.onerror = null;
+    image.classList.remove('is-ready');
+    image.removeAttribute('src');
     image.alt = data.title;
     title.textContent = data.title;
     date.textContent = formatDate(parseLocalDate(data.date));
@@ -729,6 +758,15 @@ function showInfoModal(data, pointEl) {
     infoContent.classList.remove('theme-blush', 'theme-gold', 'theme-warm');
     if (data.theme) infoContent.classList.add(`theme-${data.theme}`);
     infoModal.classList.add('show');
+
+    const revealImage = () => {
+        if (session !== modalSession) return;
+        image.classList.add('is-ready');
+    };
+    image.addEventListener('load', revealImage, { once: true });
+    image.addEventListener('error', revealImage, { once: true });
+    image.src = data.image;
+    if (image.complete && image.naturalWidth > 0) revealImage();
 
     if (prefersReduced()) {
         gsap.set(infoContent, { opacity: 1, scale: 1, y: 0 });
