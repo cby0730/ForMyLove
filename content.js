@@ -48,6 +48,22 @@ window.CONTENT = {
             body: '雖然妳會擔心出去玩，但我會讓妳的擔心飛走',
             image: 'photos/6.jpg',
             theme: 'blush'
+        },
+        {
+            id: 'tainan-plants',
+            date: '2026-03-26T00:00:00',
+            title: '台南行',
+            body: '老婆買植物買的超開心，我也開心',
+            image: 'photos/7.jpg',
+            theme: 'warm'
+        },
+        {
+            id: 'picnic',
+            date: '2026-04-26T00:00:00',
+            title: '野餐',
+            body: '第一次跟老婆野餐，chill的很舒服',
+            image: 'photos/8.jpg',
+            theme: 'blush'
         }
     ],
     messages: [

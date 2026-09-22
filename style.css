@@ -385,7 +385,7 @@ body {
     left: 50%;
     transform: translate(-50%, -50%);
     width: 4px;
-    height: min(70vh, calc(100vh - 11.5rem - env(safe-area-inset-bottom, 0px)));
+    height: min(74vh, calc(100vh - 10.5rem - env(safe-area-inset-bottom, 0px)));
     opacity: 0;
     pointer-events: none;
     z-index: 20;
@@ -660,7 +660,7 @@ body {
 /* ===== Responsive Timeline ===== */
 @media (max-width: 768px) {
     .timeline-container {
-        height: min(60vh, calc(100vh - 11rem - env(safe-area-inset-bottom, 0px)));
+        height: min(66vh, calc(100vh - 10.5rem - env(safe-area-inset-bottom, 0px)));
     }
 
     .timeline-point {
@@ -691,7 +691,7 @@ body {
 
 @media (max-width: 480px) {
     .timeline-container {
-        height: min(55vh, calc(100vh - 10.5rem - env(safe-area-inset-bottom, 0px)));
+        height: min(62vh, calc(100vh - 10rem - env(safe-area-inset-bottom, 0px)));
     }
 
     .timeline-point {
