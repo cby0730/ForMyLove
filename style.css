@@ -52,12 +52,13 @@ body {
     z-index: 0;
 }
 
-/* ===== Heart Wrapper (GSAP owns transform / opacity) ===== */
+/* ===== Heart Wrapper (GSAP owns transform / opacity; hidden until a stage shows it) ===== */
 .heart-wrapper {
     position: relative;
     cursor: pointer;
     -webkit-tap-highlight-color: transparent;
     z-index: 10;
+    opacity: 0;
     pointer-events: none;
 }
 
@@ -329,7 +330,12 @@ body {
     pointer-events: auto;
 }
 
-.stage-3 .timeline-scroller {
+.stage-3 .timeline-scroller,
+.stage-3 .timeline-container,
+.stage-3 .timeline-point,
+.stage-3 .timeline-point svg,
+.stage-3 .timeline-label,
+.stage-3 .timeline-continue {
     pointer-events: auto;
 }
 
@@ -404,7 +410,7 @@ body {
     width: 4px;
     height: 1400px;
     margin: 14vh auto 5rem;
-    pointer-events: auto;
+    pointer-events: none;
 }
 
 .timeline-line {
@@ -435,6 +441,7 @@ body {
     cursor: pointer;
     width: 50px;
     height: auto;
+    pointer-events: none;
 }
 
 .timeline-point-visual {
@@ -452,6 +459,7 @@ body {
     width: 100%;
     height: auto;
     display: block;
+    pointer-events: none;
 }
 
 .timeline-point.disabled {
@@ -470,7 +478,7 @@ body {
     font-weight: 600;
     color: var(--heart-color-start);
     white-space: nowrap;
-    pointer-events: auto;
+    pointer-events: none;
     text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
@@ -660,7 +668,7 @@ body {
     text-align: center;
     width: max-content;
     max-width: calc(100vw - 32px);
-    pointer-events: auto;
+    pointer-events: none;
     z-index: 25;
 }
 

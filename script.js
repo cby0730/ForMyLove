@@ -271,7 +271,11 @@ function killTransition() {
         message
     ], { clearProps: 'transform,opacity,x,y,scale,rotation,filter' });
     gsap.set([timelineScroller, timelineContainer, timerContainer], { clearProps: 'opacity' });
+    // clearProps drops the inline opacity that hides the gathered heart.
+    gsap.set(heartWrapper, { opacity: 0, x: 0, y: 0, rotation: 0 });
+    container.classList.remove('stage-3');
     setTimelineScrollLock(false);
+    setTimelineInteractive(false);
     cancelHintTimeout();
     closeInfoModal(true);
     clearParticles();
@@ -646,6 +650,11 @@ function setTimelineScrollLock(locked) {
     timelineScroller.classList.toggle('is-locked', locked);
 }
 
+function setTimelineInteractive(interactive) {
+    if (!timelineScroller) return;
+    timelineScroller.inert = !interactive;
+}
+
 function generateTimelinePoints() {
     timelinePoints.innerHTML = '';
     const list = CONTENT.memories;
@@ -681,7 +690,10 @@ function createTimelinePoint(data, y, isLeft, index) {
     label.textContent = formatDate(parseLocalDate(data.date));
     pointDiv.appendChild(label);
 
-    const open = () => showInfoModal(data, pointDiv);
+    const open = () => {
+        if (currentStage !== 3 || isAnimating) return;
+        showInfoModal(data, pointDiv);
+    };
     pointDiv.addEventListener('click', (event) => {
         event.stopPropagation();
         open();
@@ -718,6 +730,7 @@ function enterTimeline() {
         applyStageClass();
         snapIdleStageVisuals();
         updateHint();
+        setTimelineInteractive(true);
         isAnimating = false;
         return;
     }
@@ -742,6 +755,7 @@ function enterTimeline() {
             currentStage = 3;
             applyStageClass();
             updateHint();
+            setTimelineInteractive(true);
             isAnimating = false;
         }
     });
@@ -959,7 +973,7 @@ function resetToStart() {
         }
     });
     activeTimeline = tl;
-    tl.to([timerContainer, timelineScroller, timelineContinue, heartWrapper, centerGlow, message], {
+    tl.to([timerContainer, timelineScroller, timelineContinue, centerGlow, message], {
         opacity: 0,
         duration: 0.4,
         ease: 'power3.out'
@@ -978,7 +992,9 @@ function onViewportChange() {
 }
 
 function isChromeControl(target) {
-    return Boolean(target.closest('button, .timeline-point, .info-modal'));
+    if (target.closest('button, .info-modal')) return true;
+    if (currentStage !== 3 || isAnimating) return false;
+    return Boolean(target.closest('.timeline-point'));
 }
 
 // ===== Events =====
