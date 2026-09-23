@@ -37,8 +37,11 @@ function formatDate(date) {
     return `${date.getFullYear()}年${date.getMonth() + 1}月${date.getDate()}日`;
 }
 
-function targetMemoryIndex() {
-    return Math.max(0, CONTENT.memories.length - 1);
+function timelineGap() {
+    const width = window.innerWidth;
+    if (width <= 480) return 148;
+    if (width <= 768) return 168;
+    return 200;
 }
 
 // ===== State =====
@@ -63,6 +66,7 @@ const smallHeartsContainer = document.querySelector('.small-hearts-container');
 const hintElement = document.querySelector('.hint');
 const centerGlow = document.querySelector('.center-glow');
 const timelineBackdrop = document.querySelector('.timeline-backdrop');
+const timelineScroller = document.querySelector('.timeline-scroller');
 const timelineContainer = document.querySelector('.timeline-container');
 const timelineLine = document.querySelector('.timeline-line');
 const timelinePoints = document.querySelector('.timeline-points');
@@ -77,7 +81,7 @@ const timerRestart = document.querySelector('.timer-restart');
 const motionNodes = [
     heartWrapper,
     heartVisual,
-    timelineContainer,
+    timelineScroller,
     timerContainer,
     hintElement,
     infoContent,
@@ -234,6 +238,7 @@ function closeInfoModal(immediate) {
     if (immediate || prefersReduced() || !infoModal.classList.contains('show')) {
         infoModal.classList.remove('show');
         gsap.set(infoContent, { clearProps: 'transform,opacity,x,y,scale' });
+        setTimelineScrollLock(false);
         return;
     }
     gsap.to(infoContent, {
@@ -244,6 +249,7 @@ function closeInfoModal(immediate) {
         onComplete() {
             infoModal.classList.remove('show');
             gsap.set(infoContent, { clearProps: 'transform,opacity,x,y,scale' });
+            setTimelineScrollLock(false);
         }
     });
 }
@@ -264,7 +270,8 @@ function killTransition() {
         centerGlow,
         message
     ], { clearProps: 'transform,opacity,x,y,scale,rotation,filter' });
-    gsap.set([timelineContainer, timerContainer], { clearProps: 'opacity' });
+    gsap.set([timelineScroller, timelineContainer, timerContainer], { clearProps: 'opacity' });
+    setTimelineScrollLock(false);
     cancelHintTimeout();
     closeInfoModal(true);
     clearParticles();
@@ -307,20 +314,21 @@ function snapIdleStageVisuals() {
     if (currentStage === 0) {
         gsap.set(heartWrapper, { opacity: 0, scale: 0.5, x: 0, y: 0, rotation: 0 });
         gsap.set(centerGlow, { opacity: 0 });
-        gsap.set(timelineContainer, { opacity: 0 });
-        gsap.set(timelineContinue, { opacity: 0 });
+        gsap.set(timelineScroller, { opacity: 0 });
+        gsap.set(timelineContinue, { opacity: 1 });
         gsap.set(timerContainer, { opacity: 0 });
         gsap.set(message, { opacity: 0 });
+        resetTimelineScroll();
     } else if (currentStage === 1 || currentStage === 2) {
         gsap.set(heartWrapper, { opacity: 1, scale: 1, x: 0, y: 0, rotation: 0 });
         gsap.set(centerGlow, { opacity: currentStage === 1 ? 0.7 : 0 });
-        gsap.set(timelineContainer, { opacity: 0 });
-        gsap.set(timelineContinue, { opacity: 0 });
+        gsap.set(timelineScroller, { opacity: 0 });
+        gsap.set(timelineContinue, { opacity: 1 });
         gsap.set(timerContainer, { opacity: 0 });
     } else if (currentStage === 3) {
         gsap.set(heartWrapper, { opacity: 0 });
         gsap.set(centerGlow, { opacity: 0 });
-        gsap.set(timelineContainer, { opacity: 1 });
+        gsap.set(timelineScroller, { opacity: 1 });
         gsap.set(timelineContinue, { opacity: 1 });
         gsap.set(timerContainer, { opacity: 0 });
         gsap.set(timelineLine, { scaleY: 1 });
@@ -328,9 +336,10 @@ function snapIdleStageVisuals() {
     } else if (currentStage === 4) {
         gsap.set(heartWrapper, { opacity: 0 });
         gsap.set(centerGlow, { opacity: 0 });
-        gsap.set(timelineContainer, { opacity: 0 });
-        gsap.set(timelineContinue, { opacity: 0 });
+        gsap.set(timelineScroller, { opacity: 0 });
+        gsap.set(timelineContinue, { opacity: 1 });
         gsap.set(timerContainer, { opacity: 1 });
+        resetTimelineScroll();
     }
 }
 
@@ -628,13 +637,24 @@ function explodeHearts() {
     tl.to({}, { duration: hold }, 0);
 }
 
+function resetTimelineScroll() {
+    if (timelineScroller) timelineScroller.scrollTop = 0;
+}
+
+function setTimelineScrollLock(locked) {
+    if (!timelineScroller) return;
+    timelineScroller.classList.toggle('is-locked', locked);
+}
+
 function generateTimelinePoints() {
     timelinePoints.innerHTML = '';
-    const height = timelineContainer.getBoundingClientRect().height || window.innerHeight * 0.7;
     const list = CONTENT.memories;
+    const gap = timelineGap();
+    const height = list.length <= 1 ? gap : gap * (list.length - 1);
+    timelineContainer.style.height = `${height}px`;
 
     list.forEach((data, index) => {
-        const y = list.length === 1 ? height / 2 : (height / (list.length - 1)) * index;
+        const y = list.length === 1 ? height / 2 : gap * index;
         const point = createTimelinePoint(data, y, index % 2 === 1, index);
         timelinePoints.appendChild(point);
     });
@@ -681,16 +701,16 @@ function enterTimeline() {
     killTransition();
     isAnimating = true;
 
+    resetTimelineScroll();
     generateTimelinePoints();
-    const targetIndex = targetMemoryIndex();
-    const targetPoint = timelinePoints.querySelector(`[data-index="${targetIndex}"]`);
+    const targetPoint = timelinePoints.querySelector('[data-index="0"]');
     const visuals = [...timelinePoints.querySelectorAll('.timeline-point-visual')];
     const targetVisual = targetPoint ? targetPoint.querySelector('.timeline-point-visual') : null;
 
-    gsap.set(timelineContainer, { opacity: 1 });
+    gsap.set(timelineScroller, { opacity: 1 });
     gsap.set(timelineLine, { scaleY: 0, transformOrigin: 'top center' });
     gsap.set(visuals, { opacity: 0, scale: 0.4 });
-    gsap.set(timelineContinue, { opacity: 0 });
+    gsap.set(timelineContinue, { opacity: 1 });
     gsap.set(heartWrapper, { opacity: 1, scale: 1, x: 0, y: 0, rotation: 0 });
 
     if (prefersReduced() || !targetPoint) {
@@ -750,12 +770,13 @@ function enterTimeline() {
         stagger: 0.07,
         ease: 'back.out(1.4)'
     }, 1.18);
-    tl.to(timelineContinue, { opacity: 1, duration: 0.35, ease: 'power3.out' }, 1.5);
 }
 
 function refreshTimelineLayout() {
     if (currentStage !== 3) return;
+    const keep = timelineScroller ? timelineScroller.scrollTop : 0;
     generateTimelinePoints();
+    if (timelineScroller) timelineScroller.scrollTop = keep;
     gsap.set(timelineLine, { scaleY: 1 });
     gsap.set('.timeline-point-visual', { opacity: 1, clearProps: 'scale' });
 }
@@ -805,6 +826,7 @@ function showInfoModal(data, pointEl) {
     infoContent.classList.remove('theme-blush', 'theme-gold', 'theme-warm');
     if (data.theme) infoContent.classList.add(`theme-${data.theme}`);
     infoModal.classList.add('show');
+    setTimelineScrollLock(true);
     applyModalImage(image, data.image, session);
 
     if (prefersReduced()) {
@@ -885,7 +907,7 @@ function enterTimer() {
         return;
     }
 
-    gsap.set(timelineContainer, { opacity: 1 });
+    gsap.set(timelineScroller, { opacity: 1 });
     gsap.set(timerContainer, { opacity: 0 });
 
     const tl = gsap.timeline({
@@ -900,7 +922,7 @@ function enterTimer() {
         }
     });
     activeTimeline = tl;
-    tl.to([timelineContainer, timelineContinue], { opacity: 0, duration: 0.35, ease: 'power3.out' }, 0);
+    tl.to(timelineScroller, { opacity: 0, duration: 0.35, ease: 'power3.out' }, 0);
     tl.to(timerContainer, { opacity: 1, duration: 0.5, ease: 'power3.out' }, 0.2);
 }
 
@@ -926,7 +948,7 @@ function resetToStart() {
 
     if (fromStage === 4) gsap.set(timerContainer, { opacity: 1 });
     if (fromStage === 3) {
-        gsap.set(timelineContainer, { opacity: 1 });
+        gsap.set(timelineScroller, { opacity: 1 });
         gsap.set(timelineContinue, { opacity: 1 });
     }
 
@@ -937,7 +959,7 @@ function resetToStart() {
         }
     });
     activeTimeline = tl;
-    tl.to([timerContainer, timelineContainer, timelineContinue, heartWrapper, centerGlow, message], {
+    tl.to([timerContainer, timelineScroller, timelineContinue, heartWrapper, centerGlow, message], {
         opacity: 0,
         duration: 0.4,
         ease: 'power3.out'
@@ -978,9 +1000,27 @@ infoModal.addEventListener('click', (event) => {
     if (event.target === infoModal) closeInfoModal();
 });
 
-timelineBackdrop.addEventListener('click', () => {
+let scrollerGesture = null;
+
+timelineScroller.addEventListener('pointerdown', (event) => {
+    if (event.button !== 0) return;
+    scrollerGesture = {
+        x: event.clientX,
+        y: event.clientY,
+        scroll: timelineScroller.scrollTop
+    };
+});
+
+timelineScroller.addEventListener('click', (event) => {
     if (currentStage !== 3) return;
     if (infoModal.classList.contains('show')) return;
+    if (isChromeControl(event.target)) return;
+    if (!scrollerGesture) return;
+    const moved = Math.hypot(event.clientX - scrollerGesture.x, event.clientY - scrollerGesture.y);
+    const scrolled = Math.abs(timelineScroller.scrollTop - scrollerGesture.scroll);
+    scrollerGesture = null;
+    if (moved > 8 || scrolled > 8) return;
+    if (Math.abs(event.clientX - (window.innerWidth / 2)) < 140) return;
     resetToStart();
 });
 
