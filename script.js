@@ -63,6 +63,7 @@ const heartVisual = document.querySelector('.heart-visual');
 const message = document.querySelector('.message');
 const particlesContainer = document.querySelector('.particles-container');
 const smallHeartsContainer = document.querySelector('.small-hearts-container');
+const starfield = document.querySelector('.starfield');
 const hintElement = document.querySelector('.hint');
 const centerGlow = document.querySelector('.center-glow');
 const timelineBackdrop = document.querySelector('.timeline-backdrop');
@@ -271,7 +272,11 @@ function killTransition() {
         message
     ], { clearProps: 'transform,opacity,x,y,scale,rotation,filter' });
     gsap.set([timelineScroller, timelineContainer, timerContainer], { clearProps: 'opacity' });
+    // clearProps drops the inline opacity that hides the gathered heart.
+    gsap.set(heartWrapper, { opacity: 0, x: 0, y: 0, rotation: 0 });
+    container.classList.remove('stage-3');
     setTimelineScrollLock(false);
+    setTimelineInteractive(false);
     cancelHintTimeout();
     closeInfoModal(true);
     clearParticles();
@@ -392,25 +397,167 @@ function createSmallHeart() {
     return outer;
 }
 
+function scatterPoint() {
+    const padding = 80;
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+    return {
+        x: padding + Math.random() * (viewportWidth - padding * 2),
+        y: padding + Math.random() * (viewportHeight - padding * 2)
+    };
+}
+
 function initializeSmallHearts() {
     gsap.killTweensOf(smallHearts);
     smallHeartsContainer.innerHTML = '';
     smallHearts = [];
 
-    const padding = 80;
-    const viewportWidth = window.innerWidth;
-    const viewportHeight = window.innerHeight;
-
     for (let i = 0; i < CONFIG.smallHeartCount; i += 1) {
         const smallHeart = createSmallHeart();
-        const x = padding + Math.random() * (viewportWidth - padding * 2);
-        const y = padding + Math.random() * (viewportHeight - padding * 2);
-        smallHeart.style.left = `${x}px`;
-        smallHeart.style.top = `${y}px`;
+        const point = scatterPoint();
+        smallHeart.style.left = `${point.x}px`;
+        smallHeart.style.top = `${point.y}px`;
         gsap.set(smallHeart, { x: 0, y: 0, scale: 1, rotation: 0, opacity: 1 });
         smallHeartsContainer.appendChild(smallHeart);
         smallHearts.push(smallHeart);
     }
+}
+
+function createStarSvg() {
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('viewBox', '0 0 24 24');
+    svg.setAttribute('aria-hidden', 'true');
+    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    path.setAttribute('d', 'M12 1.1 L14.8 9.2 L23 12 L14.8 14.8 L12 22.9 L9.2 14.8 L1 12 L9.2 9.2 Z');
+    path.setAttribute('fill', 'currentColor');
+    svg.appendChild(path);
+    return svg;
+}
+
+function createStarNode() {
+    const outer = document.createElement('div');
+    outer.className = 'sky-star';
+
+    const glyph = document.createElement('span');
+    glyph.className = 'sky-star-glyph';
+    const shape = createStarSvg();
+    shape.classList.add('sky-star-shape');
+    glyph.appendChild(shape);
+
+    const visual = document.createElement('div');
+    visual.className = 'small-heart-visual sky-star-heart';
+    const heart = createHeartSvg('starMorph');
+    heart.classList.add('small-heart-svg');
+    visual.appendChild(heart);
+
+    outer.appendChild(glyph);
+    outer.appendChild(visual);
+    return outer;
+}
+
+function clearStarfield() {
+    gsap.killTweensOf(starfield.querySelectorAll('.sky-star, .sky-star-shape, .small-heart-visual'));
+    starfield.innerHTML = '';
+    starfield.classList.remove('is-live');
+}
+
+function createStarfield() {
+    clearStarfield();
+    const padding = 24;
+    const width = window.innerWidth;
+    const height = window.innerHeight;
+
+    for (let i = 0; i < CONFIG.smallHeartCount; i += 1) {
+        const star = createStarNode();
+        const size = 6 + Math.random() * 8;
+        const cx = padding + Math.random() * (width - padding * 2);
+        const cy = padding + Math.random() * (height - padding * 2);
+        star.style.left = `${cx - 20}px`;
+        star.style.top = `${cy - 20}px`;
+        star.style.setProperty('--star-size', `${size.toFixed(1)}px`);
+        star.style.setProperty('--twinkle-delay', `${(Math.random() * 3.4).toFixed(2)}s`);
+        star.style.setProperty('--twinkle-duration', `${(3.1 + Math.random() * 2.4).toFixed(2)}s`);
+        star.style.setProperty('--star-rotate', `${Math.floor(Math.random() * 360)}deg`);
+        gsap.set(star, { x: 0, y: 0, opacity: 1 });
+        starfield.appendChild(star);
+    }
+}
+
+function revealStarfield() {
+    if (!starfield.childElementCount) createStarfield();
+    starfield.classList.add('is-live');
+}
+
+function settleMorphedHearts(stars) {
+    stars.forEach((star) => {
+        const dx = parseFloat(gsap.getProperty(star, 'x')) || 0;
+        const dy = parseFloat(gsap.getProperty(star, 'y')) || 0;
+        const left = parseFloat(star.style.left) || 0;
+        const top = parseFloat(star.style.top) || 0;
+        star.style.left = `${left + dx}px`;
+        star.style.top = `${top + dy}px`;
+        const glyph = star.querySelector('.sky-star-glyph');
+        if (glyph) glyph.remove();
+        const visual = star.querySelector('.small-heart-visual');
+        if (visual) visual.classList.remove('sky-star-heart');
+        star.className = 'small-heart';
+        star.style.removeProperty('--star-size');
+        star.style.removeProperty('--twinkle-delay');
+        star.style.removeProperty('--twinkle-duration');
+        star.style.removeProperty('--star-rotate');
+        gsap.set(star, { x: 0, y: 0, scale: 1, rotation: 0, opacity: 1 });
+        if (visual) gsap.set(visual, { clearProps: 'opacity,transform,scale,x,y,rotation' });
+    });
+    smallHearts = stars.slice();
+    starfield.classList.remove('is-live');
+}
+
+function appendStarMorph(tl, stars) {
+    gsap.killTweensOf(smallHearts);
+    smallHeartsContainer.innerHTML = '';
+    smallHearts = [];
+
+    stars.forEach((star, index) => {
+        star.classList.add('is-morphing');
+        smallHeartsContainer.appendChild(star);
+        smallHearts.push(star);
+
+        const target = scatterPoint();
+        const left = parseFloat(star.style.left) || 0;
+        const top = parseFloat(star.style.top) || 0;
+        const shape = star.querySelector('.sky-star-shape');
+        const visual = star.querySelector('.small-heart-visual');
+        const starSize = parseFloat(star.style.getPropertyValue('--star-size')) || 10;
+        const startScale = Math.min(0.42, Math.max(0.16, starSize / 40));
+        const at = index * 0.03;
+
+        tl.to(star, {
+            x: target.x - left,
+            y: target.y - top,
+            duration: 0.9,
+            ease: 'power2.inOut'
+        }, at);
+
+        if (shape) {
+            tl.to(shape, {
+                opacity: 0,
+                scale: 0.2,
+                duration: 0.4,
+                ease: 'power2.in'
+            }, at);
+        }
+        if (visual) {
+            tl.fromTo(visual, {
+                opacity: 0,
+                scale: startScale
+            }, {
+                opacity: 1,
+                scale: 1,
+                duration: 0.55,
+                ease: 'power3.out'
+            }, at + 0.12);
+        }
+    });
 }
 
 function pickMessage() {
@@ -646,6 +793,11 @@ function setTimelineScrollLock(locked) {
     timelineScroller.classList.toggle('is-locked', locked);
 }
 
+function setTimelineInteractive(interactive) {
+    if (!timelineScroller) return;
+    timelineScroller.inert = !interactive;
+}
+
 function generateTimelinePoints() {
     timelinePoints.innerHTML = '';
     const list = CONTENT.memories;
@@ -681,7 +833,10 @@ function createTimelinePoint(data, y, isLeft, index) {
     label.textContent = formatDate(parseLocalDate(data.date));
     pointDiv.appendChild(label);
 
-    const open = () => showInfoModal(data, pointDiv);
+    const open = () => {
+        if (currentStage !== 3 || isAnimating) return;
+        showInfoModal(data, pointDiv);
+    };
     pointDiv.addEventListener('click', (event) => {
         event.stopPropagation();
         open();
@@ -703,6 +858,7 @@ function enterTimeline() {
 
     resetTimelineScroll();
     generateTimelinePoints();
+    createStarfield();
     const targetPoint = timelinePoints.querySelector('[data-index="0"]');
     const visuals = [...timelinePoints.querySelectorAll('.timeline-point-visual')];
     const targetVisual = targetPoint ? targetPoint.querySelector('.timeline-point-visual') : null;
@@ -718,6 +874,8 @@ function enterTimeline() {
         applyStageClass();
         snapIdleStageVisuals();
         updateHint();
+        revealStarfield();
+        setTimelineInteractive(true);
         isAnimating = false;
         return;
     }
@@ -742,6 +900,8 @@ function enterTimeline() {
             currentStage = 3;
             applyStageClass();
             updateHint();
+            revealStarfield();
+            setTimelineInteractive(true);
             isAnimating = false;
         }
     });
@@ -929,14 +1089,21 @@ function enterTimer() {
 function resetToStart() {
     if (isAnimating) return;
     const fromStage = currentStage;
+    const stars = [...starfield.children];
     killTransition();
     isAnimating = true;
+
+    const canMorph = stars.length > 0 && !prefersReduced();
 
     const finish = () => {
         currentStage = 0;
         applyStageClass();
         snapIdleStageVisuals();
-        initializeSmallHearts();
+        if (canMorph) settleMorphedHearts(stars);
+        else {
+            clearStarfield();
+            initializeSmallHearts();
+        }
         updateHint();
         isAnimating = false;
     };
@@ -959,11 +1126,12 @@ function resetToStart() {
         }
     });
     activeTimeline = tl;
-    tl.to([timerContainer, timelineScroller, timelineContinue, heartWrapper, centerGlow, message], {
+    tl.to([timerContainer, timelineScroller, timelineContinue, centerGlow, message], {
         opacity: 0,
         duration: 0.4,
         ease: 'power3.out'
-    });
+    }, 0);
+    if (canMorph) appendStarMorph(tl, stars);
 }
 
 function applyContent() {
@@ -978,7 +1146,9 @@ function onViewportChange() {
 }
 
 function isChromeControl(target) {
-    return Boolean(target.closest('button, .timeline-point, .info-modal'));
+    if (target.closest('button, .info-modal')) return true;
+    if (currentStage !== 3 || isAnimating) return false;
+    return Boolean(target.closest('.timeline-point'));
 }
 
 // ===== Events =====
