@@ -246,6 +246,97 @@ body {
     pointer-events: none;
 }
 
+/* ===== Starfield (timeline + timer; same nodes until restart) ===== */
+.starfield {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.7s ease;
+}
+
+.starfield.is-live {
+    opacity: 1;
+}
+
+.sky-star {
+    position: absolute;
+    width: 40px;
+    color: #e45686;
+    pointer-events: none;
+}
+
+.sky-star:nth-child(2n) {
+    color: #ff6b9d;
+}
+
+.sky-star:nth-child(3n) {
+    color: #c23866;
+}
+
+.sky-star-glyph {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: var(--star-size, 10px);
+    height: var(--star-size, 10px);
+    margin-left: calc(var(--star-size, 10px) / -2);
+    margin-top: calc(var(--star-size, 10px) / -2);
+    transform: rotate(var(--star-rotate, 0deg));
+    pointer-events: none;
+}
+
+.sky-star-shape {
+    display: block;
+    width: 100%;
+    height: 100%;
+    opacity: 0.4;
+    transform-origin: center;
+    filter: drop-shadow(0 0 4px rgba(255, 107, 157, 0.55));
+    animation: starTwinkle var(--twinkle-duration, 3.6s) ease-in-out infinite;
+    animation-delay: var(--twinkle-delay, 0s);
+}
+
+.sky-star-heart {
+    opacity: 0;
+    pointer-events: none;
+}
+
+.sky-star.is-morphing .sky-star-shape {
+    animation: none;
+}
+
+@keyframes starTwinkle {
+
+    0%,
+    100% {
+        opacity: 0.22;
+    }
+
+    50% {
+        opacity: 0.5;
+    }
+}
+
+@media (prefers-color-scheme: dark) {
+    .sky-star {
+        color: #ffe6f1;
+    }
+
+    .sky-star:nth-child(2n) {
+        color: #ff9ec4;
+    }
+
+    .sky-star:nth-child(3n) {
+        color: #ffffff;
+    }
+
+    .sky-star-shape {
+        filter: drop-shadow(0 0 5px rgba(255, 228, 240, 0.7));
+    }
+}
+
 /* ===== Small Hearts ===== */
 .small-hearts-container {
     position: fixed;
@@ -479,7 +570,7 @@ body {
     color: var(--heart-color-start);
     white-space: nowrap;
     pointer-events: none;
-    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    text-shadow: 0 0 6px var(--bg-color), 0 1px 2px var(--bg-color);
 }
 
 .timeline-point.left .timeline-label {
@@ -799,7 +890,7 @@ body {
     opacity: 0;
     pointer-events: none;
     z-index: 50;
-    background: var(--bg-color);
+    background: transparent;
 }
 
 .timer-content {
@@ -980,7 +1071,12 @@ body {
     .timer-content,
     .info-content,
     .timeline-point-visual,
-    .center-glow {
+    .center-glow,
+    .starfield,
+    .sky-star,
+    .sky-star-glyph,
+    .sky-star-shape,
+    .sky-star-heart {
         animation: none !important;
         transition: none !important;
     }
