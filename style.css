@@ -329,15 +329,7 @@ body {
     pointer-events: auto;
 }
 
-.stage-3 .timeline-backdrop {
-    pointer-events: auto;
-}
-
-.stage-3 .timeline-container {
-    pointer-events: auto;
-}
-
-.stage-3 .timeline-continue {
+.stage-3 .timeline-scroller {
     pointer-events: auto;
 }
 
@@ -378,17 +370,41 @@ body {
     background: transparent;
 }
 
-/* ===== Timeline (GSAP owns container opacity) ===== */
-.timeline-container {
+/* ===== Scrollable timeline (GSAP owns scroller opacity) ===== */
+.timeline-scroller {
     position: fixed;
-    top: 48%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    width: 4px;
-    height: min(74vh, calc(100vh - 10.5rem - env(safe-area-inset-bottom, 0px)));
+    inset: 0;
+    z-index: 20;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-y;
     opacity: 0;
     pointer-events: none;
-    z-index: 20;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 107, 157, 0.45) transparent;
+}
+
+.timeline-scroller.is-locked {
+    overflow: hidden;
+}
+
+.timeline-scroller::-webkit-scrollbar {
+    width: 6px;
+}
+
+.timeline-scroller::-webkit-scrollbar-thumb {
+    background: rgba(255, 107, 157, 0.45);
+    border-radius: 999px;
+}
+
+.timeline-container {
+    position: relative;
+    width: 4px;
+    height: 1400px;
+    margin: 14vh auto 5rem;
+    pointer-events: auto;
 }
 
 .timeline-line {
@@ -454,7 +470,7 @@ body {
     font-weight: 600;
     color: var(--heart-color-start);
     white-space: nowrap;
-    pointer-events: none;
+    pointer-events: auto;
     text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
@@ -625,12 +641,11 @@ body {
     }
 }
 
-/* ===== Continue button: fixed + safe area (not clipped) ===== */
+/* ===== Continue button: after the last memory ===== */
 .timeline-continue {
-    position: fixed;
-    left: 50%;
-    bottom: calc(20px + env(safe-area-inset-bottom, 0px));
-    transform: translateX(-50%);
+    position: relative;
+    display: block;
+    margin: 0 auto calc(18vh + env(safe-area-inset-bottom, 0px));
     font-family: var(--font-cjk);
     font-size: 16px;
     font-weight: 500;
@@ -643,9 +658,9 @@ body {
     box-shadow: 0 4px 20px rgba(194, 56, 102, 0.3);
     white-space: normal;
     text-align: center;
+    width: max-content;
     max-width: calc(100vw - 32px);
-    opacity: 0;
-    pointer-events: none;
+    pointer-events: auto;
     z-index: 25;
 }
 
@@ -661,7 +676,7 @@ body {
 /* ===== Responsive Timeline ===== */
 @media (max-width: 768px) {
     .timeline-container {
-        height: min(66vh, calc(100vh - 10.5rem - env(safe-area-inset-bottom, 0px)));
+        margin-top: 12vh;
     }
 
     .timeline-point {
@@ -692,7 +707,8 @@ body {
 
 @media (max-width: 480px) {
     .timeline-container {
-        height: min(62vh, calc(100vh - 10rem - env(safe-area-inset-bottom, 0px)));
+        margin-top: 11vh;
+        margin-bottom: 3.5rem;
     }
 
     .timeline-point {
@@ -739,8 +755,8 @@ body {
 
 @media (max-height: 560px) {
     .timeline-container {
-        top: 42%;
-        height: calc(100vh - 7.25rem - env(safe-area-inset-bottom, 0px));
+        margin-top: 10vh;
+        margin-bottom: 3rem;
     }
 
     .timeline-point {
