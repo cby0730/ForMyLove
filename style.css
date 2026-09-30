@@ -402,6 +402,37 @@ body {
     filter: drop-shadow(0 0 16px rgba(255, 107, 157, 0.85));
 }
 
+/* ===== Greeting (Stage 0, GSAP owns opacity / y) ===== */
+.greeting {
+    position: fixed;
+    top: calc(28px + env(safe-area-inset-top, 0px));
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 100;
+    pointer-events: none;
+    opacity: 0;
+    width: max-content;
+    max-width: 90vw;
+    text-align: center;
+    font-family: var(--font-cjk);
+    font-size: 26px;
+    letter-spacing: 0.08em;
+    color: var(--heart-color-end);
+    text-shadow: 0 2px 12px rgba(255, 107, 157, 0.25);
+}
+
+@media (prefers-color-scheme: dark) {
+    .greeting {
+        color: var(--heart-color-start);
+    }
+}
+
+@media (max-width: 480px) {
+    .greeting {
+        font-size: 22px;
+    }
+}
+
 /* ===== Hint (GSAP owns opacity / y) ===== */
 .hint-container {
     position: fixed;
@@ -1124,6 +1155,49 @@ body {
     opacity: 0.8;
 }
 
+.timer-reply-wrap {
+    margin: -30px 0 36px;
+}
+
+.timer-reply {
+    font-family: var(--font-cjk);
+    font-size: 16px;
+    color: var(--heart-color-end);
+    background: rgba(255, 107, 157, 0.1);
+    border: 1px solid rgba(255, 107, 157, 0.45);
+    padding: 10px 26px;
+    border-radius: 30px;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    transition: background 0.3s ease;
+}
+
+.timer-reply:hover {
+    background: rgba(255, 107, 157, 0.18);
+}
+
+.timer-reply-count {
+    min-height: 1.5em;
+    margin-top: 10px;
+    font-family: var(--font-cjk);
+    font-size: 14px;
+    color: var(--text-color);
+    opacity: 0.7;
+}
+
+.timer-reply-count.is-milestone {
+    color: var(--heart-color-end);
+    font-size: 16px;
+    opacity: 1;
+}
+
+@media (prefers-color-scheme: dark) {
+    .timer-reply,
+    .timer-reply-count.is-milestone {
+        color: var(--heart-color-start);
+    }
+}
+
 .timer-restart {
     font-family: var(--font-cjk);
     font-size: 16px;
@@ -1227,6 +1301,97 @@ body {
         font-size: 14px;
         padding: 12px 30px;
     }
+
+    .timer-reply-wrap {
+        margin: -16px 0 24px;
+    }
+
+    .timer-reply {
+        font-size: 14px;
+        padding: 9px 22px;
+    }
+}
+
+/* ===== Gate (soft password page) ===== */
+.gate {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    padding: 24px;
+    font-family: var(--font-cjk);
+    text-align: center;
+}
+
+.gate[hidden] {
+    display: none;
+}
+
+.gate-heart {
+    width: 88px;
+    height: auto;
+    margin-bottom: 8px;
+    filter: drop-shadow(0 6px 18px rgba(194, 56, 102, 0.3));
+    animation: breathe 2.5s ease-in-out infinite;
+}
+
+.gate-title {
+    font-size: 24px;
+    letter-spacing: 0.08em;
+    color: var(--heart-color-end);
+}
+
+.gate-input {
+    width: min(70vw, 240px);
+    padding: 12px 16px;
+    font-family: var(--font-cjk);
+    /* 16px+ keeps iOS Safari from zooming in on focus. */
+    font-size: 20px;
+    letter-spacing: 0.2em;
+    text-align: center;
+    color: var(--text-color);
+    background: rgba(255, 255, 255, 0.85);
+    border: 1px solid rgba(255, 107, 157, 0.45);
+    border-radius: 14px;
+    outline: none;
+}
+
+.gate-input:focus {
+    border-color: var(--heart-color-start);
+    box-shadow: 0 0 0 3px rgba(255, 107, 157, 0.2);
+}
+
+.gate-submit {
+    font-family: var(--font-cjk);
+    font-size: 16px;
+    color: white;
+    background: linear-gradient(135deg, var(--heart-color-start), var(--heart-color-end));
+    border: none;
+    padding: 12px 40px;
+    border-radius: 30px;
+    cursor: pointer;
+    box-shadow: 0 4px 20px rgba(194, 56, 102, 0.3);
+}
+
+.gate-error {
+    min-height: 1.5em;
+    font-size: 15px;
+    color: var(--heart-color-end);
+}
+
+@media (prefers-color-scheme: dark) {
+    .gate-title,
+    .gate-error {
+        color: var(--heart-color-start);
+    }
+
+    .gate-input {
+        background: rgba(42, 42, 42, 0.9);
+    }
 }
 
 /* ===== Reduced motion ===== */
@@ -1248,7 +1413,8 @@ body {
     .timeline-label,
     .info-image,
     .info-image-container,
-    .center-glow {
+    .center-glow,
+    .gate-heart {
         animation: none !important;
         transition: none !important;
     }

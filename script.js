@@ -96,6 +96,12 @@ const infoCounter = document.querySelector('.info-counter');
 const timerContainer = document.querySelector('.timer-container');
 const timerRestart = document.querySelector('.timer-restart');
 const timerUpcoming = document.querySelector('.timer-upcoming');
+const timerReply = document.querySelector('.timer-reply');
+const timerReplyCount = document.querySelector('.timer-reply-count');
+const greetingElement = document.querySelector('.greeting');
+const gateForm = document.querySelector('.gate');
+const gateInput = document.querySelector('.gate-input');
+const gateError = document.querySelector('.gate-error');
 
 const motionNodes = [
     heartWrapper,
@@ -106,7 +112,9 @@ const motionNodes = [
     infoContent,
     timelineContinue,
     centerGlow,
-    message
+    message,
+    greetingElement,
+    timerReply
 ];
 
 // ===== Motion helpers =====
@@ -368,7 +376,8 @@ function killTransition() {
         hintElement,
         infoContent,
         timelineContinue,
-        message
+        message,
+        timerReply
     ], { clearProps: 'transform,opacity,x,y,scale,rotation,filter' });
     // The big heart and glow keep their opacity: it is the current stage's
     // resting state (hidden in Stages 3–4), and .heart-wrapper has no CSS
@@ -418,6 +427,8 @@ function updateHint() {
 }
 
 function snapIdleStageVisuals() {
+    // Stage 0 leaves the greeting to showGreeting() so it can fade in.
+    if (currentStage !== 0) gsap.set(greetingElement, { opacity: 0 });
     if (currentStage === 0) {
         gsap.set(heartWrapper, { opacity: 0, scale: 0.5, x: 0, y: 0, rotation: 0 });
         gsap.set(centerGlow, { opacity: 0 });
@@ -486,11 +497,16 @@ function initializeSmallHearts() {
     const padding = 80;
     const viewportWidth = window.innerWidth;
     const viewportHeight = window.innerHeight;
+    // Keep the scattered hearts below the greeting so it never covers one.
+    const greetingBottom = greetingElement.textContent
+        ? greetingElement.getBoundingClientRect().bottom + 16
+        : 0;
+    const top = Math.max(padding, greetingBottom);
 
     for (let i = 0; i < CONFIG.smallHeartCount; i += 1) {
         const smallHeart = createSmallHeart();
         const x = padding + Math.random() * (viewportWidth - padding * 2);
-        const y = padding + Math.random() * (viewportHeight - padding * 2);
+        const y = top + Math.random() * Math.max(viewportHeight - top - padding, 0);
         smallHeart.style.left = `${x}px`;
         smallHeart.style.top = `${y}px`;
         gsap.set(smallHeart, { x: 0, y: 0, scale: 1, rotation: 0, opacity: 1 });
@@ -707,6 +723,7 @@ function gatherHearts() {
     activeTimeline = tl;
 
     tl.to(centerGlow, { opacity: 0.85, duration: lastArrive, ease: 'power2.in' }, 0);
+    tl.to(greetingElement, { opacity: 0, y: -10, duration: 0.35, ease: 'power2.out' }, 0);
 
     smallHearts.forEach((el, index) => {
         el.classList.add('is-gathering');
@@ -1377,6 +1394,36 @@ function upcomingAnniversaries(now) {
         .sort((a, b) => a.inDays - b.inDays);
 }
 
+// ===== Greeting =====
+// Picked by the hour the page is opened; a `from > to` range wraps past
+// midnight. On an anniversary the day's name wins over the time of day.
+function pickGreeting(now) {
+    const today = upcomingAnniversaries(now).find((event) => event.inDays === 0);
+    if (today) return `今天是${today.label} 🎉`;
+    const hour = now.getHours();
+    const match = (CONTENT.greetings || []).find(({ from, to }) => (
+        from <= to ? hour >= from && hour < to : hour >= from || hour < to
+    ));
+    return match ? match.text : '';
+}
+
+function showGreeting() {
+    const text = pickGreeting(new Date());
+    greetingElement.textContent = text;
+    if (!text) return;
+    if (prefersReduced()) {
+        gsap.set(greetingElement, { opacity: 1, y: 0 });
+        return;
+    }
+    gsap.fromTo(greetingElement, { opacity: 0, y: 10 }, {
+        opacity: 1,
+        y: 0,
+        duration: 0.8,
+        delay: 0.2,
+        ease: 'power3.out'
+    });
+}
+
 function renderAnniversaries() {
     const events = upcomingAnniversaries(new Date());
     timerUpcoming.innerHTML = '';
@@ -1425,6 +1472,76 @@ function spawnHeartRain() {
             }
         });
     }
+}
+
+// ===== Reply heart =====
+// She can send a heart back from the timer page. The tally lives in this
+// browser's localStorage only (no server), so it counts per device.
+const STORAGE_KEYS = { replies: 'formylove.replies', unlocked: 'formylove.unlocked' };
+
+function readStorage(key) {
+    try {
+        return window.localStorage.getItem(key);
+    } catch (err) {
+        return null;
+    }
+}
+
+function writeStorage(key, value) {
+    try {
+        window.localStorage.setItem(key, value);
+    } catch (err) {
+        // Private browsing may refuse storage; the count just won't persist.
+    }
+}
+
+let replyCount = Number(readStorage(STORAGE_KEYS.replies)) || 0;
+
+function renderReplyCount() {
+    const reply = CONTENT.reply;
+    if (!reply) return;
+    const milestone = reply.milestones && reply.milestones[replyCount];
+    if (milestone) timerReplyCount.textContent = milestone;
+    else if (replyCount > 0) timerReplyCount.textContent = reply.count.replace('{n}', replyCount);
+    else timerReplyCount.textContent = '';
+    timerReplyCount.classList.toggle('is-milestone', Boolean(milestone));
+}
+
+// One big heart rises from the button and fades near the timer.
+function spawnReplyHeart() {
+    if (prefersReduced()) return;
+    const rect = timerReply.getBoundingClientRect();
+    const size = 44;
+    const heart = document.createElement('div');
+    heart.className = 'particle reply-heart';
+    heart.style.width = `${size}px`;
+    heart.style.height = `${size}px`;
+    heart.style.left = `${rect.left + rect.width / 2 - size / 2}px`;
+    heart.style.top = `${rect.top - size / 2}px`;
+    heart.appendChild(createHeartSvg());
+    particlesContainer.appendChild(heart);
+    gsap.fromTo(heart, { y: 0, scale: 0.4, opacity: 1 }, {
+        y: -Math.min(window.innerHeight * 0.45, 320),
+        x: (Math.random() - 0.5) * 60,
+        scale: 1.3,
+        opacity: 0,
+        duration: 1.6,
+        ease: 'power2.out',
+        onComplete() {
+            heart.remove();
+        }
+    });
+}
+
+function sendReplyHeart() {
+    replyCount += 1;
+    writeStorage(STORAGE_KEYS.replies, String(replyCount));
+    renderReplyCount();
+    spawnReplyHeart();
+    if (!prefersReduced()) {
+        gsap.fromTo(timerReply, { scale: 0.92 }, { scale: 1, duration: 0.4, ease: 'back.out(3)' });
+    }
+    if (CONTENT.reply.milestones && CONTENT.reply.milestones[replyCount]) spawnHeartRain();
 }
 
 function startTimer() {
@@ -1478,6 +1595,7 @@ function resetToStart() {
         currentStage = 0;
         applyStageClass();
         snapIdleStageVisuals();
+        showGreeting();
         initializeSmallHearts();
         updateHint();
         isAnimating = false;
@@ -1511,6 +1629,66 @@ function resetToStart() {
 function applyContent() {
     document.querySelector('.timer-title').textContent = CONTENT.timer.title;
     document.querySelector('.timer-message').textContent = CONTENT.timer.footer;
+    if (CONTENT.reply) {
+        timerReply.textContent = CONTENT.reply.button;
+        renderReplyCount();
+    } else {
+        timerReply.parentElement.hidden = true;
+    }
+}
+
+// ===== Gate =====
+// A soft lock, not security: the answer is any anniversary date in
+// content.js, which anyone reading the source can see. It only keeps a
+// stray visitor with the link from walking straight in.
+let gateOpen = false;
+
+function gateAnswers() {
+    return CONTENT.memories.filter((m) => m.anniversary).flatMap((m) => {
+        const d = parseLocalDate(m.date);
+        const mmdd = `${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`;
+        return [`${d.getFullYear()}${mmdd}`, mmdd];
+    });
+}
+
+function needsGate() {
+    const gate = CONTENT.gate;
+    return Boolean(gate && gate.enabled && gateAnswers().length && readStorage(STORAGE_KEYS.unlocked) !== '1');
+}
+
+function showGate(onUnlock) {
+    const gate = CONTENT.gate;
+    gateOpen = true;
+    gateForm.querySelector('.gate-title').textContent = gate.title;
+    gateForm.querySelector('.gate-submit').textContent = gate.button;
+    gateInput.placeholder = gate.placeholder;
+    gateForm.hidden = false;
+    gateInput.focus();
+
+    gateForm.addEventListener('submit', (event) => {
+        event.preventDefault();
+        const answer = gateInput.value.replace(/\D/g, '');
+        if (!gateAnswers().includes(answer)) {
+            gateError.textContent = gate.wrong;
+            gateInput.select();
+            if (!prefersReduced()) {
+                gsap.fromTo(gateForm, { x: -10 }, { x: 0, duration: 0.5, ease: 'elastic.out(1, 0.3)' });
+            }
+            return;
+        }
+        writeStorage(STORAGE_KEYS.unlocked, '1');
+        gateInput.blur();
+        const done = () => {
+            gateForm.hidden = true;
+            gateOpen = false;
+            onUnlock();
+        };
+        if (prefersReduced()) {
+            done();
+            return;
+        }
+        gsap.to(gateForm, { opacity: 0, scale: 1.04, duration: 0.5, ease: 'power2.in', onComplete: done });
+    });
 }
 
 function onViewportChange() {
@@ -1649,7 +1827,7 @@ document.addEventListener('pointercancel', (event) => {
 heartWrapper.addEventListener('contextmenu', (event) => event.preventDefault());
 
 document.addEventListener('pointerup', (event) => {
-    if (event.button !== 0) return;
+    if (event.button !== 0 || gateOpen) return;
     cancelLongPress();
     // The release that completed a long-press must not also advance a stage.
     if (event.pointerId === suppressPointerId) {
@@ -1743,6 +1921,11 @@ timelineContinue.addEventListener('click', (event) => {
     if (currentStage === 3) enterTimer();
 });
 
+timerReply.addEventListener('click', (event) => {
+    event.stopPropagation();
+    if (currentStage === 4) sendReplyHeart();
+});
+
 timerRestart.addEventListener('click', (event) => {
     event.stopPropagation();
     resetToStart();
@@ -1770,6 +1953,20 @@ function init() {
     currentStage = 0;
     applyStageClass();
     snapIdleStageVisuals();
+    gsap.set(greetingElement, { opacity: 0 });
+    if (needsGate()) {
+        smallHeartsContainer.hidden = true;
+        showGate(() => {
+            smallHeartsContainer.hidden = false;
+            startScene();
+        });
+        return;
+    }
+    startScene();
+}
+
+function startScene() {
+    showGreeting();
     initializeSmallHearts();
     hintTimeout = setTimeout(() => {
         hintElement.textContent = CONFIG.hints[0];

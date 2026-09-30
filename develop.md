@@ -8,7 +8,9 @@
 
 ```
 ForMyLove/
-├── index.html      # 頁面結構、共用愛心 SVG symbol
+├── index.html      # 頁面結構、共用愛心 SVG symbol、分享預覽 meta
+├── favicon.svg     # 分頁圖示（與 sprite 同一條愛心路徑）
+├── og-image.png    # 分享預覽圖 1200×630；apple-touch-icon.png 為主畫面圖示 180×180
 ├── style.css       # 樣式（依區塊註解分段）
 ├── content.js      # window.CONTENT：回憶、情話、計時器、彩蛋訊息
 ├── script.js       # 五階段狀態機、時間軸、回憶彈窗、計時器、長按
@@ -58,6 +60,16 @@ GSAP 負責動畫元素的 `transform`／`opacity`；CSS 的 `.stage-N` 只控�
 ### 計時器與週年倒數
 - 每一格只在數字改變時翻牌；漸層字放在 `.timer-digit` 上，因為移動中的子元素會破壞父層的 `background-clip: text`。
 - `upcomingAnniversaries()` 以本地日期計算 `anniversary: true` 回憶的下一個週年；當天 `inDays` 為 0（顯示「今天是…」並下愛心雨），隔天自動換成下一年。2/29 在平年落在 2/28。
+
+### 開場招呼語
+`pickGreeting()` 依打開時的小時挑 `CONTENT.greetings`（`from > to` 表示跨午夜）；當天是週年時改用 `upcomingAnniversaries()` 的標題。`showGreeting()` 在 `init` 與 `resetToStart()` 淡入，`gatherHearts()` 的時間軸裡淡出；其他階段由 `snapIdleStageVisuals()` 設為 0。招呼語固定在畫面頂端，`showGreeting()` 要在 `initializeSmallHearts()` 之前呼叫，小愛心才會避開它的範圍。
+
+### 回一顆愛心
+計時器頁 `.timer-reply`：`sendReplyHeart()` 把次數存在 `localStorage`（`formylove.replies`），飛出一顆 `.particle.reply-heart`（因此 `clearParticles()` 會一起清掉），剛好到 `reply.milestones` 的數字時換文字並下愛心雨。只存在同一個瀏覽器，沒有伺服器，不會跨裝置同步。`localStorage` 在無痕模式可能丟例外，所以一律經過 `readStorage()`／`writeStorage()`。
+
+### 密碼頁
+`.gate` 放在 `.container` 外、z-index 1000。答案由 `gateAnswers()` 從 `anniversary: true` 的回憶日期產生（`YYYYMMDD` 與 `MMDD`，輸入時非數字會被去掉）。答對後在 `localStorage` 記下 `formylove.unlocked`，才呼叫 `startScene()` 產生小愛心與招呼語；鎖著的時候 `gateOpen` 讓全域 `pointerup` 直接返回，點畫面不會推進階段。
+這只是「軟鎖」：答案就在 `content.js`，照片也能直接用網址打開，擋不住看原始碼的人。GitHub Pages 本身沒有存取控制。另外加了 `robots: noindex` 避免被搜尋引擎收錄。
 
 ### 花火彩蛋（`firework.js`）
 - 觸發：Stage 1／2 長按大愛心 `CONFIG.longPressMs`（1.5s），移動超過 10px 或提早放開就取消。完成長按的那次放開以 `suppressPointerId` 比對後吞掉，不會同時推進階段。結束後停在原本的階段。
