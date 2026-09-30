@@ -68,6 +68,10 @@ body {
     font-family: var(--font-cjk);
 }
 
+.firework-message:empty {
+    display: none;
+}
+
 .firework-line {
     font-size: 30px;
     letter-spacing: 0.12em;
@@ -80,7 +84,7 @@ body {
     font-family: 'LXGW WenKai TC', 'Klee One', 'Hiragino Mincho ProN', serif;
     font-size: 22px;
     letter-spacing: 0.08em;
-    opacity: 0.92;
+    color: rgba(255, 246, 230, 0.92);
 }
 
 .heart-wrapper {
@@ -201,7 +205,7 @@ body {
     letter-spacing: 0.12em;
 }
 
-/* Per-character reveal (message + firework line) */
+/* Per-character reveal (Stage 2 message) */
 .split-char {
     display: inline-block;
     white-space: pre;

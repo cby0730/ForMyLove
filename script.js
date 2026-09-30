@@ -1618,7 +1618,6 @@ function launchFirework() {
         scene: container,
         reduced,
         lines: secretLines(),
-        split: renderSplitText,
         onDone: finishFirework
     });
 }

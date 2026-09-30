@@ -183,18 +183,18 @@
     }
 
     // ===== Message =====
-    function buildMessage(lines, split) {
+    // One element per line; each line glows in whole rather than per character.
+    function buildMessage(lines) {
         messageEl.innerHTML = '';
-        const chars = [];
-        lines.forEach((line) => {
+        const rows = lines.map((line) => {
             const row = document.createElement('div');
             row.className = 'firework-line';
             if (line.lang) row.lang = line.lang;
+            row.textContent = line.text;
             messageEl.appendChild(row);
-            chars.push(...split(row, line.text));
+            return row;
         });
-        messageEl.setAttribute('aria-label', lines.map((l) => l.text).join(' '));
-        return chars;
+        return rows;
     }
 
     // ===== Drawing =====
@@ -386,7 +386,7 @@
         ctx.clearRect(0, 0, width, height);
         trailCtx.clearRect(0, 0, width, height);
         sky.style.opacity = '0';
-        gsap.killTweensOf(messageEl.querySelectorAll('.split-char'));
+        gsap.killTweensOf(messageEl.querySelectorAll('.firework-line'));
         gsap.set(messageEl, { opacity: 0 });
         messageEl.innerHTML = '';
         if (r.scene) gsap.set(r.scene, { clearProps: 'transform' });
@@ -417,7 +417,7 @@
             ctx.arc(cx + p.x * radius, cy + p.y * radius, 1.6, 0, Math.PI * 2);
             ctx.fill();
         });
-        buildMessage(opts.lines, opts.split);
+        buildMessage(opts.lines);
         messageEl.style.top = `${cy}px`;
         gsap.set(messageEl, { opacity: 1 });
     }
@@ -462,9 +462,11 @@
         };
         run = r;
         const st = r.state;
-        const chars = buildMessage(opts.lines, opts.split);
+        const rows = buildMessage(opts.lines);
         messageEl.style.top = `${settleY}px`;
         gsap.set(messageEl, { opacity: 0 });
+        // Staggered lines must stay hidden until their own turn comes.
+        gsap.set(rows, { opacity: 0 });
         scheduleSound(r);
 
         const rise = { t: 0 };
@@ -500,14 +502,16 @@
         tl.to(st, { zoom: zoomEnd, duration: 0.8, ease: 'power2.out' }, T.burst);
         tl.to(st, { camY: climb + (settleY - target), duration: 0.8, ease: 'power2.inOut' }, T.burst);
 
+        // Each line is lit up by the burst: it swells out of a soft blur and
+        // settles, the Japanese line following a beat later.
         tl.set(messageEl, { opacity: 1 }, T.burst + 0.5);
-        tl.fromTo(chars, { opacity: 0, y: 12, filter: 'blur(6px)' }, {
+        tl.fromTo(rows, { opacity: 0, scale: 1.12, filter: 'blur(10px)' }, {
             opacity: 1,
-            y: 0,
+            scale: 1,
             filter: 'blur(0px)',
-            duration: 0.5,
-            stagger: 0.08,
-            ease: 'power3.out',
+            duration: 1.4,
+            stagger: 0.6,
+            ease: 'power2.out',
             immediateRender: false
         }, T.burst + 0.5);
         tl.to(messageEl, { opacity: 0, duration: 0.6, ease: 'power2.in' }, T.burst + T.droop);
