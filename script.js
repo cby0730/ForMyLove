@@ -364,14 +364,17 @@ function killTransition() {
     gsap.killTweensOf(motionNodes.concat(smallHearts));
     gsap.killTweensOf('.timeline-point-visual');
     gsap.set([
-        heartWrapper,
         heartVisual,
         hintElement,
         infoContent,
         timelineContinue,
-        centerGlow,
         message
     ], { clearProps: 'transform,opacity,x,y,scale,rotation,filter' });
+    // The big heart and glow keep their opacity: it is the current stage's
+    // resting state (hidden in Stages 3–4), and .heart-wrapper has no CSS
+    // opacity to fall back to, so clearing it would flash the heart at full
+    // size behind the next transition.
+    gsap.set([heartWrapper, centerGlow], { clearProps: 'transform,x,y,scale,rotation,filter' });
     gsap.set([timelineScroller, timelineContainer, timerContainer], { clearProps: 'opacity' });
     setTimelineScrollLock(false);
     cancelHintTimeout();
