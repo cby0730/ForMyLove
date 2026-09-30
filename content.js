@@ -1,4 +1,5 @@
 // 只改這個檔案就能更換文案、日期與照片。script.js 只讀 window.CONTENT。
+// memories 選填欄位：focus（照片推近的焦點，例如 '30% 80%'）、kenBurns（false 關閉推近）。
 window.CONTENT = {
     memories: [
         {
@@ -15,7 +16,8 @@ window.CONTENT = {
             title: '一起的手環',
             body: '我們是環環相扣不可分割的另一半',
             image: 'photos/2.webp',
-            theme: 'warm'
+            theme: 'warm',
+            kenBurns: false
         },
         {
             id: 'live-together',
@@ -47,7 +49,8 @@ window.CONTENT = {
             title: '一起出國',
             body: '雖然妳會擔心出去玩，但我會讓妳的擔心飛走',
             image: 'photos/6.webp',
-            theme: 'blush'
+            theme: 'blush',
+            focus: '30% 80%'
         },
         {
             id: 'tainan-plants',
@@ -63,7 +66,8 @@ window.CONTENT = {
             title: '野餐',
             body: '第一次跟老婆野餐，chill的很舒服',
             image: 'photos/8.webp',
-            theme: 'blush'
+            theme: 'blush',
+            focus: '50% 20%'
         }
     ],
     messages: [

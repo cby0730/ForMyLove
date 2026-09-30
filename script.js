@@ -24,6 +24,8 @@ const CONFIG = {
 const reducedMotionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const CONFETTI_COLORS = ['#d4af37', '#f5e6a3', '#c9a227', '#ffe082', '#e8c547'];
+const WARM_GLOW_COLORS = ['#ffb37a', '#ff9a62', '#ffd2a8', '#f7a26b'];
+const CJK_CHAR = /[\u3040-\u30ff\u3400-\u9fff\uf900-\ufaff\uff00-\uffef]/;
 
 function prefersReduced() {
     return reducedMotionQuery.matches;
@@ -56,6 +58,8 @@ let lastMessageIndex = -1;
 let modalSession = 0;
 let modalReturnFocus = null;
 let heartsViewport = { w: window.innerWidth, h: window.innerHeight };
+let modalMemory = null;
+let lineFrame = null;
 const memoryImageCache = new Map();
 
 // ===== DOM =====
@@ -65,6 +69,7 @@ const heartVisual = document.querySelector('.heart-visual');
 const message = document.querySelector('.message');
 const particlesContainer = document.querySelector('.particles-container');
 const smallHeartsContainer = document.querySelector('.small-hearts-container');
+const tapLayer = document.querySelector('.tap-layer');
 const hintElement = document.querySelector('.hint');
 const centerGlow = document.querySelector('.center-glow');
 const timelineBackdrop = document.querySelector('.timeline-backdrop');
@@ -142,10 +147,22 @@ function clearRipples() {
     });
 }
 
-function clearWeddingConfetti() {
+function clearModalEffects() {
     if (!modalConfetti) return;
     gsap.killTweensOf(modalConfetti.children);
     modalConfetti.innerHTML = '';
+}
+
+function clearTapHearts() {
+    gsap.killTweensOf(tapLayer.children);
+    tapLayer.innerHTML = '';
+}
+
+function cancelLineFrame() {
+    if (lineFrame) {
+        window.cancelAnimationFrame(lineFrame);
+        lineFrame = null;
+    }
 }
 
 function stopTimer() {
@@ -203,9 +220,29 @@ function preloadAllMemoryImages() {
     });
 }
 
+// The frame takes the photo's own ratio so portrait shots don't sit in
+// a 4:3 box with grey bars; CSS caps the height and derives the width.
+function fitImageFrame(image) {
+    const frame = image.parentElement;
+    const w = image.naturalWidth;
+    const h = image.naturalHeight;
+    if (!frame || !w || !h) return;
+    frame.style.setProperty('--ratio', String(w / h));
+}
+
+function startKenBurns(image, memory) {
+    gsap.killTweensOf(image);
+    const focus = (memory && memory.focus) || '50% 50%';
+    gsap.set(image, { scale: 1, transformOrigin: focus });
+    if (prefersReduced() || !memory || memory.kenBurns === false) return;
+    gsap.to(image, { scale: 1.06, duration: 6, ease: 'sine.out' });
+}
+
 function revealModalImage(image, session) {
     if (session !== modalSession) return;
+    fitImageFrame(image);
     image.classList.add('is-ready');
+    startKenBurns(image, modalMemory);
 }
 
 function applyModalImage(image, src, session) {
@@ -243,6 +280,7 @@ function clearModalImage() {
     image.onload = null;
     image.onerror = null;
     image.classList.remove('is-ready');
+    gsap.set(image, { clearProps: 'transform' });
 }
 
 function restoreModalFocus() {
@@ -278,7 +316,7 @@ function closeInfoModal(immediate) {
     const wasOpen = infoModal.classList.contains('show');
     modalSession += 1;
     gsap.killTweensOf([infoContent, image, title, date, description]);
-    clearWeddingConfetti();
+    clearModalEffects();
     infoContent.classList.remove('theme-blush', 'theme-gold', 'theme-warm');
     clearModalImage();
     if (wasOpen) restoreModalFocus();
@@ -324,7 +362,8 @@ function killTransition() {
     clearParticles();
     clearRipples();
     stopTimer();
-    clearWeddingConfetti();
+    clearModalEffects();
+    cancelLineFrame();
 }
 
 function applyStageClass() {
@@ -380,6 +419,7 @@ function snapIdleStageVisuals() {
         gsap.set(timerContainer, { opacity: 0 });
         gsap.set(timelineLine, { scaleY: 1 });
         gsap.set('.timeline-point-visual', { opacity: 1, scale: 1 });
+        timelinePoints.querySelectorAll('.timeline-point').forEach((point) => point.classList.add('is-revealed'));
     } else if (currentStage === 4) {
         gsap.set(heartWrapper, { opacity: 0 });
         gsap.set(centerGlow, { opacity: 0 });
@@ -472,6 +512,45 @@ function applyMessageStyle(text) {
     message.classList.toggle('is-cjk', /[\u4e00-\u9fff]/.test(text));
 }
 
+// Split a line into per-character spans for staggered reveals. CJK
+// characters may break anywhere; Latin words stay whole so a line never
+// wraps mid-word. Returns the character spans in reading order.
+function renderSplitText(target, text) {
+    target.textContent = '';
+    target.setAttribute('aria-label', text);
+    const chars = [];
+    const makeChar = (ch) => {
+        const span = document.createElement('span');
+        span.className = 'split-char';
+        span.setAttribute('aria-hidden', 'true');
+        span.textContent = ch;
+        chars.push(span);
+        return span;
+    };
+    text.split(/(\s+)/).forEach((token) => {
+        if (!token) return;
+        if (/^\s+$/.test(token)) {
+            target.appendChild(document.createTextNode(' '));
+            return;
+        }
+        let word = null;
+        Array.from(token).forEach((ch) => {
+            if (CJK_CHAR.test(ch)) {
+                word = null;
+                target.appendChild(makeChar(ch));
+                return;
+            }
+            if (!word) {
+                word = document.createElement('span');
+                word.className = 'split-word';
+                target.appendChild(word);
+            }
+            word.appendChild(makeChar(ch));
+        });
+    });
+    return chars;
+}
+
 function createParticle() {
     const particle = document.createElement('div');
     particle.className = 'particle';
@@ -534,6 +613,36 @@ function createRipple() {
             ripple.remove();
         }
     });
+}
+
+// Small hearts float up from wherever the screen is tapped.
+function spawnTapHearts(x, y, pointerType) {
+    if (prefersReduced()) return;
+    if (pointerType === 'touch' && navigator.vibrate) navigator.vibrate(10);
+    const count = 1 + Math.floor(Math.random() * 3);
+    for (let i = 0; i < count; i += 1) {
+        const heart = document.createElement('div');
+        heart.className = 'tap-heart';
+        const size = 14 + Math.random() * 10;
+        heart.style.width = `${size}px`;
+        heart.style.left = `${x - size / 2}px`;
+        heart.style.top = `${y - size / 2}px`;
+        heart.appendChild(createHeartSvg());
+        tapLayer.appendChild(heart);
+        gsap.fromTo(heart, { x: 0, y: 0, scale: 0.4, opacity: 0.95, rotation: (Math.random() - 0.5) * 30 }, {
+            x: (Math.random() - 0.5) * 60,
+            y: -(50 + Math.random() * 60),
+            scale: 1,
+            opacity: 0,
+            rotation: (Math.random() - 0.5) * 50,
+            duration: 0.9 + Math.random() * 0.4,
+            delay: i * 0.06,
+            ease: 'power2.out',
+            onComplete() {
+                heart.remove();
+            }
+        });
+    }
 }
 
 // ===== Stage transitions =====
@@ -618,7 +727,7 @@ function explodeHearts() {
     isAnimating = true;
 
     const text = pickMessage();
-    message.textContent = text;
+    const chars = renderSplitText(message, text);
     applyMessageStyle(text);
     gsap.set(heartWrapper, { opacity: 1, scale: 1, x: 0, y: 0, rotation: 0 });
     gsap.set(centerGlow, { opacity: 0.7 });
@@ -663,10 +772,13 @@ function explodeHearts() {
         repeat: 1
     }, 0);
     tl.to(centerGlow, { opacity: 0, duration: 0.45, ease: 'power3.out' }, 0);
-    tl.fromTo(message, { opacity: 0, scale: 0.86 }, {
+    tl.set(message, { opacity: 1, scale: 1 }, 0.05);
+    tl.fromTo(chars, { opacity: 0, y: 14, filter: 'blur(6px)' }, {
         opacity: 1,
-        scale: 1,
-        duration: 0.4,
+        y: 0,
+        filter: 'blur(0px)',
+        duration: 0.45,
+        stagger: Math.min(0.07, 0.6 / Math.max(chars.length, 1)),
         ease: 'power3.out'
     }, 0.05);
     tl.to(message, {
@@ -719,7 +831,13 @@ function createTimelinePoint(data, y, isLeft, index) {
 
     const label = document.createElement('div');
     label.className = 'timeline-label';
-    label.textContent = formatDate(parseLocalDate(data.date));
+    const labelDate = document.createElement('span');
+    labelDate.className = 'timeline-label-date';
+    labelDate.textContent = formatDate(parseLocalDate(data.date));
+    const labelTitle = document.createElement('span');
+    labelTitle.className = 'timeline-label-title';
+    labelTitle.textContent = data.title;
+    label.append(labelDate, labelTitle);
     pointDiv.appendChild(label);
 
     const open = () => showInfoModal(data, pointDiv);
@@ -735,6 +853,53 @@ function createTimelinePoint(data, y, isLeft, index) {
     });
 
     return pointDiv;
+}
+
+function timelineLineProgress() {
+    const height = timelineContainer.offsetHeight;
+    if (!height) return 1;
+    const reach = timelineScroller.scrollTop + timelineScroller.clientHeight * 0.88 - timelineContainer.offsetTop;
+    return Math.min(1, Math.max(0, reach / height));
+}
+
+function syncTimelineLine() {
+    lineFrame = null;
+    if (currentStage !== 3 || isAnimating) return;
+    revealVisiblePoints();
+    gsap.to(timelineLine, { scaleY: timelineLineProgress(), duration: 0.25, ease: 'power2.out', overwrite: true });
+}
+
+function isPointInView(point) {
+    const rect = point.getBoundingClientRect();
+    return rect.top < window.innerHeight * 0.88 && rect.bottom > 0;
+}
+
+function revealPoint(point, delay) {
+    if (point.classList.contains('is-revealed')) return;
+    point.classList.add('is-revealed');
+    const visual = point.querySelector('.timeline-point-visual');
+    if (prefersReduced()) {
+        gsap.set(visual, { opacity: 1, scale: 1 });
+        return;
+    }
+    gsap.to(visual, {
+        opacity: 1,
+        scale: 1,
+        duration: 0.45,
+        delay: delay || 0,
+        ease: 'back.out(1.6)',
+        onComplete() {
+            gsap.set(visual, { clearProps: 'scale' });
+        }
+    });
+}
+
+// Hearts below the fold wait until they're scrolled into view. Driven by
+// the same rAF-throttled scroll handler as the line, so both stay in step.
+function revealVisiblePoints() {
+    timelinePoints.querySelectorAll('.timeline-point:not(.is-revealed)').forEach((point) => {
+        if (isPointInView(point)) revealPoint(point);
+    });
 }
 
 function enterTimeline() {
@@ -758,6 +923,7 @@ function enterTimeline() {
         currentStage = 3;
         applyStageClass();
         snapIdleStageVisuals();
+        timelinePoints.querySelectorAll('.timeline-point').forEach((point) => point.classList.add('is-revealed'));
         updateHint();
         isAnimating = false;
         return;
@@ -775,15 +941,18 @@ function enterTimeline() {
     };
     const targetScale = pointRect.width / Math.max(heartRect.width, 1);
 
+    const points = [...timelinePoints.querySelectorAll('.timeline-point')];
+    const inView = points.filter((point) => point !== targetPoint && isPointInView(point));
+
     const tl = gsap.timeline({
         onComplete() {
             activeTimeline = null;
             gsap.set(heartWrapper, { opacity: 0 });
-            gsap.set(visuals, { clearProps: 'scale' });
             currentStage = 3;
             applyStageClass();
             updateHint();
             isAnimating = false;
+            syncTimelineLine();
         }
     });
     activeTimeline = tl;
@@ -803,28 +972,32 @@ function enterTimeline() {
     }, 0);
     tl.to(heartWrapper, { opacity: 0, duration: 0.22, ease: 'power3.out' }, 0.88);
     tl.to(targetVisual, { opacity: 1, scale: 1, duration: 0.22, ease: 'power3.out' }, 0.88);
-    tl.to(timelineLine, { scaleY: 1, duration: 0.55, ease: 'power3.out' }, 1.05);
-    tl.to(visuals.filter((node) => node !== targetVisual), {
-        opacity: 1,
-        scale: 1,
-        duration: 0.4,
-        stagger: 0.07,
-        ease: 'back.out(1.4)'
-    }, 1.18);
+    tl.call(() => targetPoint.classList.add('is-revealed'), null, 0.88);
+    tl.to(timelineLine, { scaleY: timelineLineProgress(), duration: 0.55, ease: 'power3.out' }, 1.05);
+    tl.call(() => inView.forEach((point, i) => revealPoint(point, i * 0.07)), null, 1.18);
+    tl.to({}, { duration: 0.4 + inView.length * 0.07 }, 1.18);
 }
 
 function refreshTimelineLayout() {
     if (currentStage !== 3) return;
     const keep = timelineScroller ? timelineScroller.scrollTop : 0;
+    const revealed = new Set([...timelinePoints.querySelectorAll('.timeline-point.is-revealed')]
+        .map((point) => point.dataset.index));
     generateTimelinePoints();
     if (timelineScroller) timelineScroller.scrollTop = keep;
-    gsap.set(timelineLine, { scaleY: 1 });
-    gsap.set('.timeline-point-visual', { opacity: 1, clearProps: 'scale' });
+    timelinePoints.querySelectorAll('.timeline-point').forEach((point) => {
+        const visual = point.querySelector('.timeline-point-visual');
+        if (revealed.has(point.dataset.index) || isPointInView(point)) {
+            point.classList.add('is-revealed');
+            gsap.set(visual, { opacity: 1 });
+        } else {
+            gsap.set(visual, { opacity: 0, scale: 0.4 });
+        }
+    });
+    gsap.set(timelineLine, { scaleY: timelineLineProgress() });
 }
 
 function spawnWeddingConfetti() {
-    if (prefersReduced()) return;
-    clearWeddingConfetti();
     const layer = modalConfetti;
     const width = layer.clientWidth || 400;
     const height = layer.clientHeight || 360;
@@ -851,13 +1024,87 @@ function spawnWeddingConfetti() {
     }
 }
 
+// Fade a freshly tweened node in, hold, then out across its main tween.
+function fadeInOut(node, peak) {
+    const main = gsap.getTweensOf(node)[0];
+    const duration = main ? main.duration() : 2;
+    const delay = main ? main.delay() : 0;
+    gsap.timeline({ delay })
+        .to(node, { opacity: peak, duration: duration * 0.25, ease: 'power1.out' })
+        .to(node, { opacity: 0, duration: duration * 0.35, ease: 'power1.in' }, duration * 0.65);
+}
+
+function spawnBlushHearts() {
+    const layer = modalConfetti;
+    const width = layer.clientWidth || 400;
+    const height = layer.clientHeight || 360;
+    for (let i = 0; i < 12; i += 1) {
+        const heart = document.createElement('div');
+        heart.className = 'modal-heart';
+        const size = 10 + Math.random() * 12;
+        heart.style.width = `${size}px`;
+        heart.appendChild(createHeartSvg());
+        layer.appendChild(heart);
+        gsap.fromTo(heart, {
+            x: Math.random() * (width - size),
+            y: height + 10,
+            opacity: 0,
+            scale: 0.6
+        }, {
+            y: height * (0.1 + Math.random() * 0.4),
+            x: `+=${(Math.random() - 0.5) * 60}`,
+            scale: 1,
+            duration: 1.8 + Math.random() * 1.2,
+            delay: Math.random() * 0.6,
+            ease: 'power1.out'
+        });
+        fadeInOut(heart, 0.85);
+    }
+}
+
+function spawnWarmGlow() {
+    const layer = modalConfetti;
+    const width = layer.clientWidth || 400;
+    const height = layer.clientHeight || 360;
+    for (let i = 0; i < 16; i += 1) {
+        const dot = document.createElement('span');
+        dot.className = 'glow-dot';
+        const size = 4 + Math.random() * 6;
+        dot.style.width = `${size}px`;
+        dot.style.height = `${size}px`;
+        dot.style.background = WARM_GLOW_COLORS[i % WARM_GLOW_COLORS.length];
+        layer.appendChild(dot);
+        gsap.fromTo(dot, {
+            x: Math.random() * width,
+            y: height * (0.5 + Math.random() * 0.5),
+            opacity: 0
+        }, {
+            y: `-=${60 + Math.random() * 120}`,
+            x: `+=${(Math.random() - 0.5) * 40}`,
+            duration: 2 + Math.random() * 1.5,
+            delay: Math.random() * 0.8,
+            ease: 'sine.inOut'
+        });
+        fadeInOut(dot, 0.9);
+    }
+}
+
+function spawnModalEffect(theme) {
+    if (prefersReduced()) return;
+    clearModalEffects();
+    if (theme === 'gold') spawnWeddingConfetti();
+    else if (theme === 'blush') spawnBlushHearts();
+    else if (theme === 'warm') spawnWarmGlow();
+}
+
 function showInfoModal(data, pointEl) {
     const { image, title, date, description } = modalFields();
     const session = modalSession + 1;
     modalSession = session;
 
     gsap.killTweensOf([infoContent, image, title, date, description]);
-    clearWeddingConfetti();
+    clearModalEffects();
+    modalMemory = data;
 
     image.alt = data.title;
     title.textContent = data.title;
@@ -909,9 +1156,7 @@ function showInfoModal(data, pointEl) {
         });
     }
 
-    if (data.theme === 'gold') {
-        spawnWeddingConfetti();
-    }
+    spawnModalEffect(data.theme);
 }
 
 function calculateTimeDifference() {
@@ -931,23 +1176,49 @@ const timerNodes = {
     seconds: document.getElementById('t-seconds')
 };
 
-function setTimerValue(node, value) {
-    if (node.textContent === value) return false;
-    node.textContent = value;
-    return true;
+// Only the unit that changed flips: the old value slides up and out while
+// the new one rises in underneath it.
+function setTimerValue(node, value, animate) {
+    if (node.dataset.value === value) return;
+    node.dataset.value = value;
+    node.querySelectorAll('.timer-digit.is-leaving').forEach((el) => {
+        gsap.killTweensOf(el);
+        el.remove();
+    });
+    const prev = node.querySelector('.timer-digit');
+    const next = document.createElement('span');
+    next.className = 'timer-digit';
+    next.textContent = value;
+    node.appendChild(next);
+    if (!prev) return;
+    if (!animate || prefersReduced()) {
+        prev.remove();
+        return;
+    }
+    prev.classList.add('is-leaving');
+    gsap.to(prev, {
+        yPercent: -70,
+        opacity: 0,
+        duration: 0.35,
+        ease: 'power2.in',
+        onComplete() {
+            prev.remove();
+        }
+    });
+    gsap.fromTo(next, { yPercent: 70, opacity: 0 }, { yPercent: 0, opacity: 1, duration: 0.4, ease: 'power3.out' });
 }
 
-function updateTimerDisplay() {
+function updateTimerDisplay(animate) {
     const time = calculateTimeDifference();
-    setTimerValue(timerNodes.days, String(time.days));
-    setTimerValue(timerNodes.hours, String(time.hours).padStart(2, '0'));
-    setTimerValue(timerNodes.minutes, String(time.minutes).padStart(2, '0'));
-    setTimerValue(timerNodes.seconds, String(time.seconds).padStart(2, '0'));
+    setTimerValue(timerNodes.days, String(time.days), animate);
+    setTimerValue(timerNodes.hours, String(time.hours).padStart(2, '0'), animate);
+    setTimerValue(timerNodes.minutes, String(time.minutes).padStart(2, '0'), animate);
+    setTimerValue(timerNodes.seconds, String(time.seconds).padStart(2, '0'), animate);
 }
 
 function startTimer() {
-    updateTimerDisplay();
-    timerInterval = setInterval(updateTimerDisplay, 1000);
+    updateTimerDisplay(false);
+    timerInterval = setInterval(() => updateTimerDisplay(true), 1000);
 }
 
 function enterTimer() {
@@ -1044,6 +1315,9 @@ function isChromeControl(target) {
 // ===== Events =====
 document.addEventListener('pointerup', (event) => {
     if (event.button !== 0) return;
+    if (!event.target.closest('.info-modal')) {
+        spawnTapHearts(event.clientX, event.clientY, event.pointerType);
+    }
     if (isAnimating) return;
     if (isChromeControl(event.target)) return;
     if (currentStage === 0) gatherHearts();
@@ -1083,6 +1357,11 @@ timelineScroller.addEventListener('click', (event) => {
     if (Math.abs(event.clientX - (window.innerWidth / 2)) < 140) return;
     resetToStart();
 });
+
+timelineScroller.addEventListener('scroll', () => {
+    if (currentStage !== 3 || lineFrame) return;
+    lineFrame = window.requestAnimationFrame(syncTimelineLine);
+}, { passive: true });
 
 timelineContinue.addEventListener('click', (event) => {
     event.stopPropagation();
