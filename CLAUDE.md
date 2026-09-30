@@ -26,7 +26,7 @@ Clean up any screenshots / temp harness files and stop the server afterwards.
 
 ## Architecture
 
-**Content vs. logic split.** `content.js` defines `window.CONTENT` (memories, Stage-2 messages, timer, milestones, firework `secret` lines). `script.js` only reads `window.CONTENT`; copy/date/photo changes should never require touching `script.js`. Dates must be `YYYY-MM-DDTHH:mm:ss` (local midnight) — bare `YYYY-MM-DD` parses as UTC. Optional per-memory fields: `theme` (`blush`/`gold`/`warm`), `focus`, `kenBurns: false`, `anniversary: true`.
+**Content vs. logic split.** `content.js` defines `window.CONTENT` (memories, Stage-2 messages, timer, firework `secret` lines). `script.js` only reads `window.CONTENT`; copy/date/photo changes should never require touching `script.js`. Dates must be `YYYY-MM-DDTHH:mm:ss` (local midnight) — bare `YYYY-MM-DD` parses as UTC. Optional per-memory fields: `theme` (`blush`/`gold`/`warm`), `focus`, `kenBurns: false`, `anniversary: true`.
 
 **Script load order matters** (classic globals, no modules): `vendor/gsap.min.js` → `content.js` → `ambient.js` → `firework.js` → `script.js`. `ambient.js` and `firework.js` are IIFEs exposing `window.Ambient` / `window.Firework`; `script.js` drives them.
 
@@ -44,7 +44,7 @@ Clean up any screenshots / temp harness files and stop the server afterwards.
 
 **Firework easter egg** (`firework.js`): long-press the big heart 1.5s in Stage 1/2 (deliberately no hint in the UI). The "camera" is a `translateY` on `.container`; the firework canvas and message live *outside* `.container` so they don't move with it. The releasing pointer is swallowed via `suppressPointerId` so it doesn't also advance the stage. Afterwards the story stays in the same stage.
 
-**Milestones**: `upcomingMilestones()` uses elapsed days (start day = day 0, matching the timer), every `timer.milestones.everyDays` plus yearly anniversaries of memories flagged `anniversary: true`.
+**Anniversaries**: `upcomingAnniversaries()` lists the next yearly anniversary of each memory flagged `anniversary: true` (currently 在一起 and 結婚). On the day it shows "today" and rains hearts; the next day it rolls over to the following year by itself.
 
 **Fonts**: stack prefers system 標楷體 with LXGW WenKai TC (Google Fonts) fallback. 標楷體 has no kana, so Japanese lines get `lang="ja"` and a WenKai-first stack to avoid mixed glyphs.
 

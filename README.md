@@ -31,7 +31,7 @@
 #### 花火與回憶瀏覽 ⭐ 最新（`main`，2026-09-30）
 - 🎆 **花火彩蛋** - 在大愛心階段長按 1.5 秒：鏡頭跟著金色錦冠菊升上夜空、在頂點停頓、爆成完整的圓並像柳枝垂落，附 Web Audio 合成的咻～／咚聲（無提示，需要親口告訴她）
 - ↔️ **回憶切換** - 彈窗內左右鈕、←／→ 鍵或左右滑動；背後時間軸同步捲動
-- 📆 **紀念日倒數** - 計時器下方列出最近的週年與每 100 天里程碑
+- 📆 **週年倒數** - 計時器下方列出「在一起」與「結婚」下一個週年還有幾天，過了當天自動換成下一年
 - 🌸 **氛圍背景** - 淺色飄花瓣、深色閃星星；點擊冒小愛心；訊息逐字浮現；計時器翻牌
 - 🖼️ **照片** - 相框跟著照片比例、Ken Burns 緩慢推近、各主題專屬特效；WebP 讓照片從 1.5 MB 降到約 0.75 MB
 
@@ -113,8 +113,7 @@ window.CONTENT = {
   timer: {
     title: '我們已經在一起',
     footer: '我會讓時間一直累積下去 ❤️',
-    start: '2020-12-19T00:00:00',
-    milestones: { everyDays: 100 }
+    start: '2020-12-19T00:00:00'
   },
   secret: {
     lines: [{ text: '一起看煙火嗎？' }, { text: '一緒に花火、見ない？', lang: 'ja' }]
@@ -125,8 +124,7 @@ window.CONTENT = {
 - `date` / `timer.start` 請用 `YYYY-MM-DDTHH:mm:ss`（本地午夜，不要只寫 `YYYY-MM-DD`）。
 - `theme` 可填 `blush` / `gold` / `warm`：彈窗光暈與特效（粉色愛心上飄／金色碎紙／暖橘光點）。
 - `focus`：照片緩慢推近（Ken Burns）的焦點，例如 `'30% 80%'`；`kenBurns: false` 關閉推近（適合本身就糊的照片）。
-- `anniversary: true`：計時器頁會列出這一天的每年週年倒數。
-- `timer.milestones.everyDays`：每 N 天一個里程碑，天數是「經過天數」（在一起當天是第 0 天）；紀念日當天會下愛心雨。
+- `anniversary: true`：計時器頁會列出這一天的下一個週年倒數（目前是「在一起」和「結婚」）；週年當天會下愛心雨，隔天自動換成下一年。
 - `secret.lines`：花火彩蛋的訊息，每個物件一行；`lang: 'ja'` 讓日文用霞鶩文楷，假名和漢字字型一致。
 - 新照片請轉成 WebP 放進 `photos/`，原檔放 `photos/originals/`：
   `convert photos/originals/9.jpg -resize '1280x1280>' +profile '!icc,*' -quality 80 photos/9.webp`

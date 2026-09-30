@@ -1334,7 +1334,7 @@ function updateTimerDisplay(animate) {
     setTimerValue(timerNodes.seconds, String(time.seconds).padStart(2, '0'), animate);
 }
 
-// ===== Milestones =====
+// ===== Anniversaries =====
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 function startOfDay(date) {
@@ -1353,18 +1353,12 @@ function anniversaryOn(base, year) {
     return d;
 }
 
-function upcomingMilestones(now, limit) {
+// Next yearly anniversary of every memory flagged `anniversary: true`.
+// On the day itself it stays "today" (inDays 0); the day after, it rolls
+// over to next year's count automatically.
+function upcomingAnniversaries(now) {
     const today = startOfDay(now);
     const events = [];
-    const every = CONTENT.timer.milestones && CONTENT.timer.milestones.everyDays;
-    const start = parseLocalDate(CONTENT.timer.start);
-
-    if (every > 0) {
-        const elapsed = daysBetween(start, today);
-        const next = elapsed > 0 && elapsed % every === 0 ? elapsed : (Math.floor(elapsed / every) + 1) * every;
-        const date = new Date(start.getFullYear(), start.getMonth(), start.getDate() + next);
-        events.push({ date, label: `在一起第 ${next} 天` });
-    }
 
     CONTENT.memories.filter((m) => m.anniversary).forEach((memory) => {
         const base = parseLocalDate(memory.date);
@@ -1380,12 +1374,11 @@ function upcomingMilestones(now, limit) {
 
     return events
         .map((e) => ({ ...e, inDays: daysBetween(today, e.date) }))
-        .sort((a, b) => a.inDays - b.inDays)
-        .slice(0, limit);
+        .sort((a, b) => a.inDays - b.inDays);
 }
 
-function renderMilestones() {
-    const events = upcomingMilestones(new Date(), 3);
+function renderAnniversaries() {
+    const events = upcomingAnniversaries(new Date());
     timerUpcoming.innerHTML = '';
     events.forEach((event) => {
         const li = document.createElement('li');
@@ -1449,7 +1442,7 @@ function enterTimer() {
         applyStageClass();
         snapIdleStageVisuals();
         startTimer();
-        if (renderMilestones()) spawnHeartRain();
+        if (renderAnniversaries()) spawnHeartRain();
         updateHint();
         isAnimating = false;
         return;
@@ -1465,7 +1458,7 @@ function enterTimer() {
             applyStageClass();
             snapIdleStageVisuals();
             startTimer();
-            if (renderMilestones()) spawnHeartRain();
+            if (renderAnniversaries()) spawnHeartRain();
             updateHint();
             isAnimating = false;
         }

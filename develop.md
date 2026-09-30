@@ -190,9 +190,9 @@ smallHearts.forEach((smallHeart, index) => {
 - 切換時相框 `--ratio` 用 CSS transition 過渡，背後時間軸同步捲到該愛心，關閉後焦點回到它。
 - 到頭不循環，改成小幅回彈。
 
-### 紀念日（C2）
-- `upcomingMilestones()` 以本地日期計算：每 `everyDays` 天（經過天數），加上 `anniversary: true` 的每年週年；2/29 在平年落在 2/28。
-- 紀念日當天計時器頁會下愛心雨。
+### 週年倒數（C2）
+- `upcomingAnniversaries()` 以本地日期計算 `anniversary: true` 回憶的下一個週年；當天 `inDays` 為 0（顯示「今天是…」並下愛心雨），隔天自動換成下一年。
+- 2/29 在平年落在 2/28。
 
 ### 動畫與背景
 - `ambient.js`：分頁隱藏時暫停，DPR 最多 2。

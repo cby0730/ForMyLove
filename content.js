@@ -86,9 +86,7 @@ window.CONTENT = {
     timer: {
         title: '我們已經在一起',
         footer: '我會讓時間一直累積下去 ❤️',
-        start: '2020-12-19T00:00:00',
-        // 每 N 天一個里程碑（天數＝經過天數，在一起當天是第 0 天）
-        milestones: { everyDays: 100 }
+        start: '2020-12-19T00:00:00'
     },
     // 長按大愛心 1.5 秒的花火彩蛋；lang 讓日文用正確字型
     secret: {
