@@ -58,4 +58,4 @@ Clean up any screenshots / temp harness files and stop the server afterwards.
 
 ## Docs
 
-`README.md` (user-facing, 繁中) and `develop.md` (dev notes, incl. per-version history) should be updated alongside feature changes.
+`README.md` (user-facing, 繁中) and `develop.md` (architecture and implementation notes) should be updated alongside feature changes.
