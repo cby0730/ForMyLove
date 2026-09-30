@@ -75,8 +75,12 @@ body {
     animation: breathe 2.5s ease-in-out infinite;
 }
 
-.heart path {
-    fill: url(#heartGradient);
+/* display:none would break gradient lookup in Safari/Firefox, so hide by size. */
+.svg-sprite {
+    position: absolute;
+    width: 0;
+    height: 0;
+    overflow: hidden;
 }
 
 .heart-wrapper:hover .heart-visual {

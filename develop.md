@@ -767,8 +767,7 @@ CNAME: your-domain.com → hosting-provider-url
 | 發光 | `rgba(255,107,157,0.6)` | 同左 |
 
 ### 字型系統
-- **標題/特殊**: Great Vibes (草寫字體)
-- **內文**: Inter (無襯線字體)
+- **全站**: 標楷體（系統字型），備援 LXGW WenKai TC（霞鶩文楷，Google Fonts）
 - **後備**: -apple-system, BlinkMacSystemFont, sans-serif
 
 ### 間距系統

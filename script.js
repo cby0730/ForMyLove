@@ -22,7 +22,7 @@ const CONFIG = {
 };
 
 const reducedMotionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
-const heartPath = 'M23.6,0c-3.4,0-6.3,2.7-7.6,5.6C14.7,2.7,11.8,0,8.4,0C3.8,0,0,3.8,0,8.4c0,9.4,9.5,11.9,16,21.2c6.1-9.3,16-12.1,16-21.2C32,3.8,28.2,0,23.6,0z';
+const SVG_NS = 'http://www.w3.org/2000/svg';
 const CONFETTI_COLORS = ['#d4af37', '#f5e6a3', '#c9a227', '#ffe082', '#e8c547'];
 
 function prefersReduced() {
@@ -54,6 +54,8 @@ let resizeTimer = null;
 let timerInterval = null;
 let lastMessageIndex = -1;
 let modalSession = 0;
+let modalReturnFocus = null;
+let heartsViewport = { w: window.innerWidth, h: window.innerHeight };
 const memoryImageCache = new Map();
 
 // ===== DOM =====
@@ -179,11 +181,26 @@ function preloadFonts() {
     ].map((face) => document.fonts.load(face).catch(() => [])));
 }
 
+function whenIdle(fn) {
+    if ('requestIdleCallback' in window) {
+        window.requestIdleCallback(fn, { timeout: 2000 });
+    } else {
+        setTimeout(fn, 300);
+    }
+}
+
+// Only the first photo competes with first paint; the rest wait until the
+// first tap (gather), still well before the timeline can open a modal.
 function preloadSiteAssets() {
-    CONTENT.memories.forEach((memory, index) => {
-        preloadImage(memory.image, index === 0);
-    });
     preloadFonts();
+    const first = CONTENT.memories[0];
+    if (first) whenIdle(() => preloadImage(first.image, false));
+}
+
+function preloadAllMemoryImages() {
+    whenIdle(() => {
+        CONTENT.memories.forEach((memory) => preloadImage(memory.image, false));
+    });
 }
 
 function revealModalImage(image, session) {
@@ -228,14 +245,44 @@ function clearModalImage() {
     image.classList.remove('is-ready');
 }
 
+function restoreModalFocus() {
+    const target = modalReturnFocus;
+    modalReturnFocus = null;
+    if (target && document.contains(target)) target.focus({ preventScroll: true });
+}
+
+function focusableInModal() {
+    return [...infoContent.querySelectorAll('button:not([disabled]), [href], [tabindex]:not([tabindex="-1"])')]
+        .filter((el) => el.offsetParent !== null);
+}
+
+function trapModalFocus(event) {
+    const items = focusableInModal();
+    if (!items.length) return;
+    const first = items[0];
+    const last = items[items.length - 1];
+    if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+    } else if (!infoContent.contains(document.activeElement)) {
+        event.preventDefault();
+        first.focus();
+    }
+}
+
 function closeInfoModal(immediate) {
     const { image, title, date, description } = modalFields();
+    const wasOpen = infoModal.classList.contains('show');
     modalSession += 1;
     gsap.killTweensOf([infoContent, image, title, date, description]);
     clearWeddingConfetti();
     infoContent.classList.remove('theme-blush', 'theme-gold', 'theme-warm');
     clearModalImage();
-    if (immediate || prefersReduced() || !infoModal.classList.contains('show')) {
+    if (wasOpen) restoreModalFocus();
+    if (immediate || prefersReduced() || !wasOpen) {
         infoModal.classList.remove('show');
         gsap.set(infoContent, { clearProps: 'transform,opacity,x,y,scale' });
         setTimelineScrollLock(false);
@@ -344,36 +391,14 @@ function snapIdleStageVisuals() {
 }
 
 // ===== Hearts =====
-function createHeartSvg(idPrefix) {
-    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+// Every heart references the shared #heart-shape symbol in index.html.
+function createHeartSvg() {
+    const svg = document.createElementNS(SVG_NS, 'svg');
     svg.setAttribute('viewBox', '0 0 32 29.6');
-
-    const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
-    const gradient = document.createElementNS('http://www.w3.org/2000/svg', 'linearGradient');
-    const gradientId = `${idPrefix}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
-    gradient.setAttribute('id', gradientId);
-    gradient.setAttribute('x1', '0%');
-    gradient.setAttribute('y1', '0%');
-    gradient.setAttribute('x2', '100%');
-    gradient.setAttribute('y2', '100%');
-
-    const stop1 = document.createElementNS('http://www.w3.org/2000/svg', 'stop');
-    stop1.setAttribute('offset', '0%');
-    stop1.setAttribute('style', 'stop-color:#ff6b9d;stop-opacity:1');
-
-    const stop2 = document.createElementNS('http://www.w3.org/2000/svg', 'stop');
-    stop2.setAttribute('offset', '100%');
-    stop2.setAttribute('style', 'stop-color:#c23866;stop-opacity:1');
-
-    gradient.appendChild(stop1);
-    gradient.appendChild(stop2);
-    defs.appendChild(gradient);
-    svg.appendChild(defs);
-
-    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-    path.setAttribute('d', heartPath);
-    path.setAttribute('fill', `url(#${gradientId})`);
-    svg.appendChild(path);
+    svg.setAttribute('aria-hidden', 'true');
+    const use = document.createElementNS(SVG_NS, 'use');
+    use.setAttribute('href', '#heart-shape');
+    svg.appendChild(use);
     return svg;
 }
 
@@ -384,7 +409,7 @@ function createSmallHeart() {
     const visual = document.createElement('div');
     visual.className = 'small-heart-visual';
 
-    const svg = createHeartSvg('smallHeartGradient');
+    const svg = createHeartSvg();
     svg.classList.add('small-heart-svg');
 
     visual.appendChild(svg);
@@ -411,6 +436,21 @@ function initializeSmallHearts() {
         smallHeartsContainer.appendChild(smallHeart);
         smallHearts.push(smallHeart);
     }
+    heartsViewport = { w: viewportWidth, h: viewportHeight };
+}
+
+// Keep the scattered hearts in the same relative spots after a resize or
+// rotation instead of re-rolling them, so the scene doesn't jump.
+function relayoutSmallHearts() {
+    const w = window.innerWidth;
+    const h = window.innerHeight;
+    const sx = w / Math.max(heartsViewport.w, 1);
+    const sy = h / Math.max(heartsViewport.h, 1);
+    smallHearts.forEach((el) => {
+        el.style.left = `${parseFloat(el.style.left) * sx}px`;
+        el.style.top = `${parseFloat(el.style.top) * sy}px`;
+    });
+    heartsViewport = { w, h };
 }
 
 function pickMessage() {
@@ -435,7 +475,7 @@ function applyMessageStyle(text) {
 function createParticle() {
     const particle = document.createElement('div');
     particle.className = 'particle';
-    particle.appendChild(createHeartSvg('particleGradient'));
+    particle.appendChild(createHeartSvg());
     return particle;
 }
 
@@ -501,6 +541,7 @@ function gatherHearts() {
     if (isAnimating) return;
     killTransition();
     isAnimating = true;
+    preloadAllMemoryImages();
     gsap.set(heartWrapper, { opacity: 0, scale: 0.5, x: 0, y: 0, rotation: 0 });
     gsap.set(centerGlow, { opacity: 0 });
     gsap.set(message, { opacity: 0 });
@@ -672,7 +713,7 @@ function createTimelinePoint(data, y, isLeft, index) {
 
     const visual = document.createElement('div');
     visual.className = 'timeline-point-visual';
-    const svg = createHeartSvg(`timelineGradient-${index}`);
+    const svg = createHeartSvg();
     visual.appendChild(svg);
     pointDiv.appendChild(visual);
 
@@ -825,8 +866,12 @@ function showInfoModal(data, pointEl) {
 
     infoContent.classList.remove('theme-blush', 'theme-gold', 'theme-warm');
     if (data.theme) infoContent.classList.add(`theme-${data.theme}`);
+    if (!infoModal.classList.contains('show')) {
+        modalReturnFocus = pointEl || document.activeElement;
+    }
     infoModal.classList.add('show');
     setTimelineScrollLock(true);
+    infoClose.focus({ preventScroll: true });
     applyModalImage(image, data.image, session);
 
     if (prefersReduced()) {
@@ -879,12 +924,25 @@ function calculateTimeDifference() {
     return { days, hours, minutes, seconds };
 }
 
+const timerNodes = {
+    days: document.getElementById('t-days'),
+    hours: document.getElementById('t-hours'),
+    minutes: document.getElementById('t-minutes'),
+    seconds: document.getElementById('t-seconds')
+};
+
+function setTimerValue(node, value) {
+    if (node.textContent === value) return false;
+    node.textContent = value;
+    return true;
+}
+
 function updateTimerDisplay() {
     const time = calculateTimeDifference();
-    document.getElementById('t-days').textContent = time.days;
-    document.getElementById('t-hours').textContent = String(time.hours).padStart(2, '0');
-    document.getElementById('t-minutes').textContent = String(time.minutes).padStart(2, '0');
-    document.getElementById('t-seconds').textContent = String(time.seconds).padStart(2, '0');
+    setTimerValue(timerNodes.days, String(time.days));
+    setTimerValue(timerNodes.hours, String(time.hours).padStart(2, '0'));
+    setTimerValue(timerNodes.minutes, String(time.minutes).padStart(2, '0'));
+    setTimerValue(timerNodes.seconds, String(time.seconds).padStart(2, '0'));
 }
 
 function startTimer() {
@@ -972,9 +1030,11 @@ function applyContent() {
 }
 
 function onViewportChange() {
-    if (currentStage !== 3) return;
     if (resizeTimer) clearTimeout(resizeTimer);
-    resizeTimer = setTimeout(refreshTimelineLayout, 120);
+    resizeTimer = setTimeout(() => {
+        if (currentStage === 0 && !isAnimating) relayoutSmallHearts();
+        else if (currentStage === 3) refreshTimelineLayout();
+    }, 120);
 }
 
 function isChromeControl(target) {
@@ -1039,9 +1099,9 @@ timerContainer.addEventListener('click', (event) => {
 });
 
 document.addEventListener('keydown', (event) => {
-    if (event.key === 'Escape' && infoModal.classList.contains('show')) {
-        closeInfoModal();
-    }
+    if (!infoModal.classList.contains('show')) return;
+    if (event.key === 'Escape') closeInfoModal();
+    else if (event.key === 'Tab') trapModalFocus(event);
 });
 
 window.addEventListener('resize', onViewportChange);

@@ -10,14 +10,6 @@
     <link rel="preload" href="vendor/gsap.min.js" as="script">
     <link rel="preload" href="content.js" as="script">
     <link rel="preload" href="script.js" as="script">
-    <link rel="preload" href="photos/1.jpg" as="image">
-    <link rel="preload" href="photos/2.jpg" as="image">
-    <link rel="preload" href="photos/3.jpg" as="image">
-    <link rel="preload" href="photos/4.jpg" as="image">
-    <link rel="preload" href="photos/5.jpg" as="image">
-    <link rel="preload" href="photos/6.jpg" as="image">
-    <link rel="preload" href="photos/7.jpg" as="image">
-    <link rel="preload" href="photos/8.jpg" as="image">
     <link rel="stylesheet" href="style.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -27,19 +19,25 @@
 </head>
 
 <body>
+    <!-- Shared heart shape: every heart on the page is a <use> of this symbol. -->
+    <svg class="svg-sprite" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+            <linearGradient id="heartGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#ff6b9d" />
+                <stop offset="100%" stop-color="#c23866" />
+            </linearGradient>
+            <symbol id="heart-shape" viewBox="0 0 32 29.6">
+                <path fill="url(#heartGradient)" d="M23.6,0c-3.4,0-6.3,2.7-7.6,5.6C14.7,2.7,11.8,0,8.4,0C3.8,0,0,3.8,0,8.4c0,9.4,9.5,11.9,16,21.2
+                c6.1-9.3,16-12.1,16-21.2C32,3.8,28.2,0,23.6,0z" />
+            </symbol>
+        </defs>
+    </svg>
     <div class="container">
         <div class="center-glow" aria-hidden="true"></div>
         <div class="heart-wrapper">
             <div class="heart-visual">
                 <svg class="heart" viewBox="0 0 32 29.6" xmlns="http://www.w3.org/2000/svg">
-                    <defs>
-                        <linearGradient id="heartGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                            <stop offset="0%" style="stop-color:#ff6b9d;stop-opacity:1" />
-                            <stop offset="100%" style="stop-color:#c23866;stop-opacity:1" />
-                        </linearGradient>
-                    </defs>
-                    <path d="M23.6,0c-3.4,0-6.3,2.7-7.6,5.6C14.7,2.7,11.8,0,8.4,0C3.8,0,0,3.8,0,8.4c0,9.4,9.5,11.9,16,21.2
-                    c6.1-9.3,16-12.1,16-21.2C32,3.8,28.2,0,23.6,0z" />
+                    <use href="#heart-shape" />
                 </svg>
             </div>
             <div class="message-container">
@@ -62,14 +60,14 @@
         </div>
 
         <div class="info-modal">
-            <div class="info-content">
+            <div class="info-content" role="dialog" aria-modal="true" aria-labelledby="info-title">
                 <div class="modal-confetti" aria-hidden="true"></div>
                 <button type="button" class="info-close" aria-label="關閉">×</button>
                 <div class="info-image-container">
-                    <img src="" alt="紀念照片" class="info-image" decoding="async" fetchpriority="high">
+                    <img alt="紀念照片" class="info-image" decoding="async">
                 </div>
                 <div class="info-details">
-                    <h3 class="info-title"></h3>
+                    <h3 class="info-title" id="info-title"></h3>
                     <p class="info-date"></p>
                     <p class="info-description"></p>
                 </div>
