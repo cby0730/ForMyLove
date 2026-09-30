@@ -6,6 +6,8 @@ if (!CONTENT || !Array.isArray(CONTENT.memories) || !CONTENT.timer) {
 }
 
 const CONFIG = {
+    longPressMs: 1500,
+    longPressSlop: 10,
     smallHeartCount: 12,
     particleCount: 12,
     particleDuration: 1.5,
@@ -59,6 +61,11 @@ let modalSession = 0;
 let modalReturnFocus = null;
 let heartsViewport = { w: window.innerWidth, h: window.innerHeight };
 let modalMemory = null;
+let modalIndex = -1;
+let modalSwipe = null;
+let longPress = null;
+let fireworkActive = false;
+let suppressPointerId = null;
 let lineFrame = null;
 const memoryImageCache = new Map();
 
@@ -82,8 +89,13 @@ const infoModal = document.querySelector('.info-modal');
 const infoContent = document.querySelector('.info-content');
 const infoClose = document.querySelector('.info-close');
 const modalConfetti = document.querySelector('.modal-confetti');
+const infoImageFrame = document.querySelector('.info-image-container');
+const infoPrev = document.querySelector('.info-prev');
+const infoNext = document.querySelector('.info-next');
+const infoCounter = document.querySelector('.info-counter');
 const timerContainer = document.querySelector('.timer-container');
 const timerRestart = document.querySelector('.timer-restart');
+const timerUpcoming = document.querySelector('.timer-upcoming');
 
 const motionNodes = [
     heartWrapper,
@@ -135,6 +147,7 @@ function cancelHintTimeout() {
 }
 
 function clearParticles() {
+    // Also catches the anniversary .rain-heart drops, which carry .particle.
     const bits = particlesContainer.querySelectorAll('.particle');
     gsap.killTweensOf(bits);
     particlesContainer.innerHTML = '';
@@ -319,6 +332,10 @@ function closeInfoModal(immediate) {
     clearModalEffects();
     infoContent.classList.remove('theme-blush', 'theme-gold', 'theme-warm');
     clearModalImage();
+    gsap.killTweensOf([infoImageFrame, ...infoContent.querySelectorAll('.info-image-container, .info-details')]);
+    gsap.set([infoImageFrame, infoContent.querySelector('.info-details')], { clearProps: 'transform,opacity,x' });
+    modalIndex = -1;
+    modalSwipe = null;
     if (wasOpen) restoreModalFocus();
     if (immediate || prefersReduced() || !wasOpen) {
         infoModal.classList.remove('show');
@@ -364,6 +381,7 @@ function killTransition() {
     stopTimer();
     clearModalEffects();
     cancelLineFrame();
+    stopFirework();
 }
 
 function applyStageClass() {
@@ -840,7 +858,7 @@ function createTimelinePoint(data, y, isLeft, index) {
     label.append(labelDate, labelTitle);
     pointDiv.appendChild(label);
 
-    const open = () => showInfoModal(data, pointDiv);
+    const open = () => showInfoModal(index, pointDiv);
     pointDiv.addEventListener('click', (event) => {
         event.stopPropagation();
         open();
@@ -1097,22 +1115,74 @@ function spawnModalEffect(theme) {
     else if (theme === 'warm') spawnWarmGlow();
 }
 
-function showInfoModal(data, pointEl) {
+function timelinePointAt(index) {
+    return timelinePoints.querySelector(`.timeline-point[data-index="${index}"]`);
+}
+
+function pulsePoint(pointEl) {
+    const visual = pointEl && pointEl.querySelector('.timeline-point-visual');
+    if (!visual || prefersReduced()) return;
+    gsap.fromTo(visual, { scale: 1 }, {
+        scale: 1.28,
+        duration: 0.18,
+        ease: 'back.out(1.4)',
+        yoyo: true,
+        repeat: 1,
+        onComplete() {
+            gsap.set(visual, { clearProps: 'scale' });
+        }
+    });
+}
+
+// Keep the timeline behind the dialog on the memory being shown, so closing
+// it lands exactly where the viewer left off.
+function syncTimelineToMemory(index) {
+    const point = timelinePointAt(index);
+    if (!point) return;
+    const target = point.offsetTop + timelineContainer.offsetTop - timelineScroller.clientHeight / 2;
+    timelineScroller.scrollTop = Math.max(0, target);
+    revealPoint(point);
+    syncTimelineLine();
+    modalReturnFocus = point;
+}
+
+function updateModalNav() {
+    const total = CONTENT.memories.length;
+    infoCounter.textContent = `${modalIndex + 1} / ${total}`;
+    infoPrev.disabled = modalIndex <= 0;
+    infoNext.disabled = modalIndex >= total - 1;
+}
+
+function fillModal(data) {
+    const { image, title, date, description } = modalFields();
+    modalMemory = data;
+    image.alt = data.title;
+    title.textContent = data.title;
+    date.textContent = formatDate(parseLocalDate(data.date));
+    description.textContent = data.body || '';
+    infoContent.classList.remove('theme-blush', 'theme-gold', 'theme-warm');
+    if (data.theme) infoContent.classList.add(`theme-${data.theme}`);
+    updateModalNav();
+}
+
+function photoRatio(src) {
+    const img = memoryImageCache.get(src);
+    if (img && img.naturalWidth && img.naturalHeight) return img.naturalWidth / img.naturalHeight;
+    return null;
+}
+
+function showInfoModal(index, pointEl) {
+    const data = CONTENT.memories[index];
+    if (!data) return;
     const { image, title, date, description } = modalFields();
     const session = modalSession + 1;
     modalSession = session;
 
     gsap.killTweensOf([infoContent, image, title, date, description]);
     clearModalEffects();
-    modalMemory = data;
+    modalIndex = index;
+    fillModal(data);
 
-    image.alt = data.title;
-    title.textContent = data.title;
-    date.textContent = formatDate(parseLocalDate(data.date));
-    description.textContent = data.body || '';
-
-    infoContent.classList.remove('theme-blush', 'theme-gold', 'theme-warm');
-    if (data.theme) infoContent.classList.add(`theme-${data.theme}`);
     if (!infoModal.classList.contains('show')) {
         modalReturnFocus = pointEl || document.activeElement;
     }
@@ -1141,22 +1211,67 @@ function showInfoModal(data, pointEl) {
         stagger: 0.08,
         ease: 'power3.out'
     });
+    pulsePoint(pointEl);
+    spawnModalEffect(data.theme);
+}
 
-    const visual = pointEl && pointEl.querySelector('.timeline-point-visual');
-    if (visual) {
-        gsap.fromTo(visual, { scale: 1 }, {
-            scale: 1.28,
-            duration: 0.18,
-            ease: 'back.out(1.4)',
-            yoyo: true,
-            repeat: 1,
-            onComplete() {
-                gsap.set(visual, { clearProps: 'scale' });
-            }
-        });
+// Step to the neighbouring memory without closing the dialog. The old
+// content slides out the way the finger moved, the frame eases to the new
+// photo's ratio, and the new content slides in from the other side.
+function stepMemory(dir) {
+    if (modalIndex < 0) return;
+    const nextIndex = modalIndex + dir;
+    const details = infoContent.querySelector('.info-details');
+    if (nextIndex < 0 || nextIndex >= CONTENT.memories.length) {
+        if (!prefersReduced()) {
+            gsap.fromTo([infoImageFrame, details], { x: 0 }, {
+                x: -dir * 14,
+                duration: 0.12,
+                ease: 'power2.out',
+                yoyo: true,
+                repeat: 1
+            });
+        }
+        return;
     }
 
-    spawnModalEffect(data.theme);
+    const data = CONTENT.memories[nextIndex];
+    const { image } = modalFields();
+    const session = modalSession + 1;
+    modalSession = session;
+    modalIndex = nextIndex;
+    syncTimelineToMemory(nextIndex);
+    clearModalEffects();
+
+    const swap = () => {
+        fillModal(data);
+        const ratio = photoRatio(data.image);
+        if (ratio) infoImageFrame.style.setProperty('--ratio', String(ratio));
+        applyModalImage(image, data.image, session);
+    };
+
+    if (prefersReduced()) {
+        swap();
+        return;
+    }
+
+    const parts = [infoImageFrame, details];
+    gsap.killTweensOf(parts);
+    const tl = gsap.timeline();
+    tl.to(parts, { x: -dir * 60, opacity: 0, duration: 0.18, ease: 'power2.in' });
+    tl.call(swap);
+    tl.fromTo(parts, { x: dir * 60, opacity: 0 }, {
+        x: 0,
+        opacity: 1,
+        duration: 0.3,
+        stagger: 0.04,
+        ease: 'power3.out',
+        immediateRender: false
+    });
+    tl.call(() => {
+        if (session === modalSession) spawnModalEffect(data.theme);
+        pulsePoint(timelinePointAt(nextIndex));
+    });
 }
 
 function calculateTimeDifference() {
@@ -1216,6 +1331,106 @@ function updateTimerDisplay(animate) {
     setTimerValue(timerNodes.seconds, String(time.seconds).padStart(2, '0'), animate);
 }
 
+// ===== Milestones =====
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+function startOfDay(date) {
+    return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+}
+
+// Whole calendar days between two local dates; rounding absorbs DST shifts.
+function daysBetween(a, b) {
+    return Math.round((startOfDay(b) - startOfDay(a)) / DAY_MS);
+}
+
+function anniversaryOn(base, year) {
+    const d = new Date(year, base.getMonth(), base.getDate());
+    // Feb 29 in a non-leap year lands on Mar 1; keep it on Feb 28 instead.
+    if (d.getMonth() !== base.getMonth()) return new Date(year, base.getMonth() + 1, 0);
+    return d;
+}
+
+function upcomingMilestones(now, limit) {
+    const today = startOfDay(now);
+    const events = [];
+    const every = CONTENT.timer.milestones && CONTENT.timer.milestones.everyDays;
+    const start = parseLocalDate(CONTENT.timer.start);
+
+    if (every > 0) {
+        const elapsed = daysBetween(start, today);
+        const next = elapsed > 0 && elapsed % every === 0 ? elapsed : (Math.floor(elapsed / every) + 1) * every;
+        const date = new Date(start.getFullYear(), start.getMonth(), start.getDate() + next);
+        events.push({ date, label: `在一起第 ${next} 天` });
+    }
+
+    CONTENT.memories.filter((m) => m.anniversary).forEach((memory) => {
+        const base = parseLocalDate(memory.date);
+        let year = today.getFullYear();
+        let date = anniversaryOn(base, year);
+        if (date < today) {
+            year += 1;
+            date = anniversaryOn(base, year);
+        }
+        const n = year - base.getFullYear();
+        if (n > 0) events.push({ date, label: `${memory.title} ${n} 週年` });
+    });
+
+    return events
+        .map((e) => ({ ...e, inDays: daysBetween(today, e.date) }))
+        .sort((a, b) => a.inDays - b.inDays)
+        .slice(0, limit);
+}
+
+function renderMilestones() {
+    const events = upcomingMilestones(new Date(), 3);
+    timerUpcoming.innerHTML = '';
+    events.forEach((event) => {
+        const li = document.createElement('li');
+        li.className = 'timer-upcoming-item';
+        if (event.inDays === 0) {
+            li.classList.add('is-today');
+            li.textContent = `🎉 今天是${event.label}！`;
+        } else {
+            const label = document.createElement('span');
+            label.textContent = event.label;
+            const days = document.createElement('span');
+            days.className = 'timer-upcoming-days';
+            days.textContent = `還有 ${event.inDays} 天`;
+            li.append(label, days);
+        }
+        timerUpcoming.appendChild(li);
+    });
+    return events.some((event) => event.inDays === 0);
+}
+
+function spawnHeartRain() {
+    if (prefersReduced()) return;
+    const width = window.innerWidth;
+    const height = window.innerHeight;
+    for (let i = 0; i < 36; i += 1) {
+        const heart = document.createElement('div');
+        heart.className = 'particle rain-heart';
+        const size = 14 + Math.random() * 18;
+        heart.style.width = `${size}px`;
+        heart.style.height = `${size}px`;
+        heart.style.left = `${Math.random() * width}px`;
+        heart.style.top = `${-size}px`;
+        heart.appendChild(createHeartSvg());
+        particlesContainer.appendChild(heart);
+        gsap.fromTo(heart, { y: 0, opacity: 0.9, rotation: (Math.random() - 0.5) * 40 }, {
+            y: height + size * 2,
+            x: (Math.random() - 0.5) * 80,
+            rotation: (Math.random() - 0.5) * 160,
+            duration: 2.6 + Math.random() * 1.6,
+            delay: Math.random() * 1.8,
+            ease: 'power1.in',
+            onComplete() {
+                heart.remove();
+            }
+        });
+    }
+}
+
 function startTimer() {
     updateTimerDisplay(false);
     timerInterval = setInterval(() => updateTimerDisplay(true), 1000);
@@ -1231,6 +1446,7 @@ function enterTimer() {
         applyStageClass();
         snapIdleStageVisuals();
         startTimer();
+        if (renderMilestones()) spawnHeartRain();
         updateHint();
         isAnimating = false;
         return;
@@ -1246,6 +1462,7 @@ function enterTimer() {
             applyStageClass();
             snapIdleStageVisuals();
             startTimer();
+            if (renderMilestones()) spawnHeartRain();
             updateHint();
             isAnimating = false;
         }
@@ -1312,9 +1529,142 @@ function isChromeControl(target) {
     return Boolean(target.closest('button, .timeline-point, .info-modal'));
 }
 
+// ===== Firework easter egg =====
+// Long-press the big heart for 1.5s in Stage 1 or 2. While held the heart
+// brightens and trembles; letting go early (or moving) cancels and the
+// release counts as a normal tap.
+function secretLines() {
+    const lines = CONTENT.secret && Array.isArray(CONTENT.secret.lines) ? CONTENT.secret.lines : [];
+    return lines.map((line) => (typeof line === 'string' ? { text: line } : line)).filter((l) => l.text);
+}
+
+function canChargeFirework() {
+    return window.Firework && !isAnimating && !fireworkActive
+        && (currentStage === 1 || currentStage === 2) && secretLines().length > 0;
+}
+
+function resetChargeVisual() {
+    heartWrapper.classList.remove('is-charging');
+    gsap.killTweensOf(heartVisual);
+    gsap.set(heartVisual, { clearProps: 'scale,x,filter' });
+}
+
+function cancelLongPress() {
+    if (!longPress) return;
+    clearTimeout(longPress.timer);
+    if (longPress.tween) longPress.tween.kill();
+    if (longPress.shake) longPress.shake.kill();
+    longPress = null;
+    resetChargeVisual();
+}
+
+function beginLongPress(event) {
+    if (!canChargeFirework()) return;
+    // Unlocks Web Audio inside the user gesture so the boom can play later.
+    window.Firework.primeAudio();
+    heartWrapper.classList.add('is-charging');
+    const lp = { x: event.clientX, y: event.clientY, id: event.pointerId };
+    if (!prefersReduced()) {
+        lp.tween = gsap.to(heartVisual, {
+            scale: 1.08,
+            filter: 'brightness(1.35) drop-shadow(0 0 28px rgba(255, 190, 120, 0.9))',
+            duration: CONFIG.longPressMs / 1000,
+            ease: 'power1.in'
+        });
+        lp.shake = gsap.fromTo(heartVisual, { x: -1 }, {
+            x: 1,
+            duration: 0.05,
+            repeat: -1,
+            yoyo: true,
+            ease: 'none'
+        });
+    }
+    lp.timer = setTimeout(() => {
+        cancelLongPress();
+        suppressPointerId = lp.id;
+        launchFirework();
+    }, CONFIG.longPressMs);
+    longPress = lp;
+}
+
+function launchFirework() {
+    if (!canChargeFirework()) return;
+    fireworkActive = true;
+    isAnimating = true;
+    cancelHintTimeout();
+    gsap.to(hintElement, { opacity: 0, duration: 0.2 });
+    const rect = heartWrapper.getBoundingClientRect();
+    const origin = { x: rect.left + rect.width / 2, y: rect.top + rect.height * 0.15 };
+    const reduced = prefersReduced();
+
+    if (!reduced) {
+        gsap.fromTo(heartVisual, { y: 0 }, {
+            y: 14,
+            duration: 0.15,
+            ease: 'power2.out',
+            yoyo: true,
+            repeat: 1,
+            onComplete() {
+                gsap.set(heartVisual, { clearProps: 'y' });
+            }
+        });
+    }
+
+    window.Firework.play({
+        origin,
+        scene: container,
+        reduced,
+        lines: secretLines(),
+        split: renderSplitText,
+        onDone: finishFirework
+    });
+}
+
+function finishFirework() {
+    fireworkActive = false;
+    isAnimating = false;
+    // Back on the ground in the same stage; the story carries on unchanged.
+    snapIdleStageVisuals();
+    updateHint();
+}
+
+function stopFirework() {
+    cancelLongPress();
+    if (fireworkActive && window.Firework) window.Firework.stop();
+    fireworkActive = false;
+}
+
 // ===== Events =====
+heartWrapper.addEventListener('pointerdown', (event) => {
+    if (event.button !== 0) return;
+    beginLongPress(event);
+});
+
+document.addEventListener('pointermove', (event) => {
+    if (!longPress || event.pointerId !== longPress.id) return;
+    if (Math.hypot(event.clientX - longPress.x, event.clientY - longPress.y) > CONFIG.longPressSlop) {
+        cancelLongPress();
+    }
+});
+
+document.addEventListener('pointercancel', (event) => {
+    cancelLongPress();
+    if (event.pointerId === suppressPointerId) suppressPointerId = null;
+});
+heartWrapper.addEventListener('contextmenu', (event) => event.preventDefault());
+
 document.addEventListener('pointerup', (event) => {
     if (event.button !== 0) return;
+    cancelLongPress();
+    // The release that completed a long-press must not also advance a stage.
+    if (event.pointerId === suppressPointerId) {
+        suppressPointerId = null;
+        return;
+    }
+    if (fireworkActive) {
+        if (window.Firework.isWaiting()) window.Firework.dismiss();
+        return;
+    }
     if (!event.target.closest('.info-modal')) {
         spawnTapHearts(event.clientX, event.clientY, event.pointerType);
     }
@@ -1332,6 +1682,36 @@ infoClose.addEventListener('click', (event) => {
 
 infoModal.addEventListener('click', (event) => {
     if (event.target === infoModal) closeInfoModal();
+});
+
+infoPrev.addEventListener('click', (event) => {
+    event.stopPropagation();
+    stepMemory(-1);
+});
+
+infoNext.addEventListener('click', (event) => {
+    event.stopPropagation();
+    stepMemory(1);
+});
+
+// Horizontal swipe on the card steps between memories; mostly-vertical
+// drags are left alone.
+infoContent.addEventListener('pointerdown', (event) => {
+    if (event.target.closest('button')) return;
+    modalSwipe = { x: event.clientX, y: event.clientY, id: event.pointerId };
+});
+
+infoContent.addEventListener('pointerup', (event) => {
+    if (!modalSwipe || modalSwipe.id !== event.pointerId) return;
+    const dx = event.clientX - modalSwipe.x;
+    const dy = event.clientY - modalSwipe.y;
+    modalSwipe = null;
+    if (Math.abs(dx) < 50 || Math.abs(dx) < Math.abs(dy) * 1.2) return;
+    stepMemory(dx < 0 ? 1 : -1);
+});
+
+infoContent.addEventListener('pointercancel', () => {
+    modalSwipe = null;
 });
 
 let scrollerGesture = null;
@@ -1381,6 +1761,8 @@ document.addEventListener('keydown', (event) => {
     if (!infoModal.classList.contains('show')) return;
     if (event.key === 'Escape') closeInfoModal();
     else if (event.key === 'Tab') trapModalFocus(event);
+    else if (event.key === 'ArrowLeft') stepMemory(-1);
+    else if (event.key === 'ArrowRight') stepMemory(1);
 });
 
 window.addEventListener('resize', onViewportChange);

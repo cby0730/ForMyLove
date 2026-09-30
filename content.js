@@ -1,5 +1,6 @@
 // 只改這個檔案就能更換文案、日期與照片。script.js 只讀 window.CONTENT。
-// memories 選填欄位：focus（照片推近的焦點，例如 '30% 80%'）、kenBurns（false 關閉推近）。
+// memories 選填欄位：focus（照片推近的焦點，例如 '30% 80%'）、kenBurns（false 關閉推近）、
+// anniversary（true 會在計時器頁顯示每年週年倒數）。
 window.CONTENT = {
     memories: [
         {
@@ -8,7 +9,8 @@ window.CONTENT = {
             title: '在一起',
             body: '我很高興我們在那個晚上一起講了電話',
             image: 'photos/1.webp',
-            theme: 'blush'
+            theme: 'blush',
+            anniversary: true
         },
         {
             id: 'bracelet',
@@ -41,7 +43,8 @@ window.CONTENT = {
             title: '結婚',
             body: '從喜歡到承諾一生，我會用盡全力陪妳走到最後',
             image: 'photos/5.webp',
-            theme: 'gold'
+            theme: 'gold',
+            anniversary: true
         },
         {
             id: 'abroad',
@@ -83,6 +86,15 @@ window.CONTENT = {
     timer: {
         title: '我們已經在一起',
         footer: '我會讓時間一直累積下去 ❤️',
-        start: '2020-12-19T00:00:00'
+        start: '2020-12-19T00:00:00',
+        // 每 N 天一個里程碑（天數＝經過天數，在一起當天是第 0 天）
+        milestones: { everyDays: 100 }
+    },
+    // 長按大愛心 1.5 秒的花火彩蛋；lang 讓日文用正確字型
+    secret: {
+        lines: [
+            { text: '一起看煙火嗎？' },
+            { text: '一緒に花火、見ない？', lang: 'ja' }
+        ]
     }
 };

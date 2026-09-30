@@ -28,7 +28,14 @@
 - 🔄 **無限循環** - 可重複體驗，每次都有新的隨機排列
 - 💬 **動態提示** - 毛玻璃效果的提示文字，引導互動
 
-#### 時間軸模式 ⭐ 最新（`main`）
+#### 花火與回憶瀏覽 ⭐ 最新（`main`，2026-09-30）
+- 🎆 **花火彩蛋** - 在大愛心階段長按 1.5 秒：鏡頭跟著金色錦冠菊升上夜空、在頂點停頓、爆成完整的圓並像柳枝垂落，附 Web Audio 合成的咻～／咚聲（無提示，需要親口告訴她）
+- ↔️ **回憶切換** - 彈窗內左右鈕、←／→ 鍵或左右滑動；背後時間軸同步捲動
+- 📆 **紀念日倒數** - 計時器下方列出最近的週年與每 100 天里程碑
+- 🌸 **氛圍背景** - 淺色飄花瓣、深色閃星星；點擊冒小愛心；訊息逐字浮現；計時器翻牌
+- 🖼️ **照片** - 相框跟著照片比例、Ken Burns 緩慢推近、各主題專屬特效；WebP 讓照片從 1.5 MB 降到約 0.75 MB
+
+#### 時間軸模式（`main`）
 - 📅 **垂直時間軸** - 展示我們一起的重要時刻
 - 💑 **回憶展示** - 每個時間點包含日期、標題、照片和描述
 - 🎯 **量測飛入** - 大愛心沿弧線縮小，對準最新那一顆後再對換
@@ -82,6 +89,8 @@ ForMyLove/
 ├── style.css           # CSS 樣式表
 ├── content.js          # 文案、日期、照片（只改這裡）
 ├── script.js           # 五階段互動與 GSAP 轉場
+├── ambient.js          # 背景花瓣／星星 canvas
+├── firework.js         # 長按花火彩蛋（canvas + Web Audio）
 ├── photos/             # 網站用照片（1.webp–8.webp，對應 content.js）
 │   └── originals/      # 原始 JPG（不會被網站載入）
 ├── README.md           # 專案說明（本文檔）
@@ -97,19 +106,31 @@ ForMyLove/
 ```js
 window.CONTENT = {
   memories: [
-    { id, date: '2020-12-19T00:00:00', title, body, image, theme }
+    { id, date: '2020-12-19T00:00:00', title, body, image, theme,
+      focus, kenBurns, anniversary }        // 後三個選填
   ],
   messages: ['I love You', '謝謝妳成為我的家'],
   timer: {
     title: '我們已經在一起',
     footer: '我會讓時間一直累積下去 ❤️',
-    start: '2020-12-19T00:00:00'
+    start: '2020-12-19T00:00:00',
+    milestones: { everyDays: 100 }
+  },
+  secret: {
+    lines: [{ text: '一起看煙火嗎？' }, { text: '一緒に花火、見ない？', lang: 'ja' }]
   }
 };
 ```
 
 - `date` / `timer.start` 請用 `YYYY-MM-DDTHH:mm:ss`（本地午夜，不要只寫 `YYYY-MM-DD`）。
-- `theme` 可填 `blush` / `gold` / `warm`，只影響彈窗光暈；`gold` 會在結婚彈窗撒金色碎紙。
+- `theme` 可填 `blush` / `gold` / `warm`：彈窗光暈與特效（粉色愛心上飄／金色碎紙／暖橘光點）。
+- `focus`：照片緩慢推近（Ken Burns）的焦點，例如 `'30% 80%'`；`kenBurns: false` 關閉推近（適合本身就糊的照片）。
+- `anniversary: true`：計時器頁會列出這一天的每年週年倒數。
+- `timer.milestones.everyDays`：每 N 天一個里程碑，天數是「經過天數」（在一起當天是第 0 天）；紀念日當天會下愛心雨。
+- `secret.lines`：花火彩蛋的訊息，每個物件一行；`lang: 'ja'` 讓日文用霞鶩文楷，假名和漢字字型一致。
+- 新照片請轉成 WebP 放進 `photos/`，原檔放 `photos/originals/`：
+  `convert photos/originals/9.jpg -resize '1280x1280>' +profile '!icc,*' -quality 80 photos/9.webp`
+  （`+profile '!icc,*'` 保留 ICC，iPhone 的 Display P3 照片顏色才不會變淡）
 - Stage 2 爆炸句從 `messages` 隨機抽，同一句不會連著出現。
 - 中文訊息會自動換行。
 
@@ -127,7 +148,8 @@ window.CONTENT = {
 | V6 | `v6` | 開放第3時間點 | 2025-12-02 |
 | V7 | `v6` | 開放第4時間點（米漿/小貓） | 2025-12-10 |
 | V8 | `v6` | 開放第5時間點（結婚） | 2025-12-10 |
-| 現況 | `main` | 8個回憶，含台南行、野餐 ⭐ | 2026-09-22 |
+| V9 | `main` | 8個回憶，含台南行、野餐 | 2026-09-22 |
+| 現況 | `main` | 花火彩蛋、回憶切換、紀念日倒數、氛圍動畫 ⭐ | 2026-09-30 |
 
 ---
 
@@ -140,9 +162,9 @@ window.CONTENT = {
 - **SVG** - 向量圖形（愛心形狀）
 - **字型** - 優先系統標楷體，備援 Google Fonts「LXGW WenKai TC（霞鶩文楷）」
 
-載入順序：GSAP → `content.js` → `script.js`。
+載入順序：GSAP → `content.js` → `ambient.js` → `firework.js` → `script.js`。
 
-減少動態（`prefers-reduced-motion`）時會關掉粒子／彩碎，改為瞬間切換階段，故事仍可走完。
+減少動態（`prefers-reduced-motion`）時會關掉粒子／彩碎／背景動畫，改為瞬間切換階段，故事仍可走完；花火彩蛋改成靜態夜空＋金色圓圈＋訊息，點一下返回。
 
 ---
 

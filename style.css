@@ -35,6 +35,75 @@ body {
     pointer-events: none;
 }
 
+/* ===== Firework easter egg ===== */
+.night-sky {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    opacity: 0;
+    background: linear-gradient(180deg, #050716 0%, #0c1030 45%, #1d1640 80%, #2a1a3f 100%);
+}
+
+.firework-canvas {
+    position: fixed;
+    inset: 0;
+    z-index: 30;
+    pointer-events: none;
+}
+
+.firework-message {
+    position: fixed;
+    left: 50%;
+    top: 40%;
+    transform: translate(-50%, -50%);
+    z-index: 31;
+    pointer-events: none;
+    opacity: 0;
+    width: max-content;
+    max-width: 90vw;
+    text-align: center;
+    color: #fff6e6;
+    text-shadow: 0 0 18px rgba(255, 190, 110, 0.75), 0 2px 6px rgba(0, 0, 0, 0.5);
+    font-family: var(--font-cjk);
+}
+
+.firework-line {
+    font-size: 30px;
+    letter-spacing: 0.12em;
+    line-height: 1.6;
+}
+
+/* 標楷體 has no kana; use WenKai (Klee One based) for the whole Japanese line
+   so kanji and kana match. */
+.firework-line:lang(ja) {
+    font-family: 'LXGW WenKai TC', 'Klee One', 'Hiragino Mincho ProN', serif;
+    font-size: 22px;
+    letter-spacing: 0.08em;
+    opacity: 0.92;
+}
+
+.heart-wrapper {
+    touch-action: none;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
+}
+
+.heart-wrapper.is-charging .heart-visual {
+    transition: none;
+}
+
+@media (max-width: 480px) {
+    .firework-line {
+        font-size: 24px;
+    }
+
+    .firework-line:lang(ja) {
+        font-size: 18px;
+    }
+}
+
 /* ===== Container Layout ===== */
 .container {
     width: 100vw;
@@ -714,6 +783,62 @@ body {
     margin: 0;
 }
 
+/* ===== Memory navigation ===== */
+.info-content {
+    touch-action: pan-y;
+}
+
+.info-image-container {
+    transition: width 0.3s ease, aspect-ratio 0.3s ease;
+}
+
+.info-nav {
+    position: relative;
+    z-index: 3;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 18px;
+    margin-top: 18px;
+}
+
+.info-prev,
+.info-next {
+    width: 38px;
+    height: 38px;
+    border: none;
+    border-radius: 50%;
+    background: rgba(255, 107, 157, 0.12);
+    color: var(--heart-color-end);
+    font-size: 24px;
+    line-height: 1;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s ease, opacity 0.2s ease;
+}
+
+.info-prev:hover:not(:disabled),
+.info-next:hover:not(:disabled) {
+    background: var(--heart-color-start);
+    color: #fff;
+}
+
+.info-prev:disabled,
+.info-next:disabled {
+    opacity: 0.3;
+    cursor: default;
+}
+
+.info-counter {
+    min-width: 3.5em;
+    text-align: center;
+    font-size: 14px;
+    letter-spacing: 0.1em;
+    color: #999;
+}
+
 @media (prefers-color-scheme: dark) {
     .info-content {
         background: rgba(42, 42, 42, 0.98);
@@ -816,6 +941,11 @@ body {
     .info-content {
         padding: 20px;
         width: 95%;
+    }
+
+    /* Leave room for the title, text and nav on short phones. */
+    .info-image-container {
+        --frame-max-h: min(50vh, 440px);
     }
 
     .info-title {
@@ -950,6 +1080,38 @@ body {
     margin-bottom: 30px;
 }
 
+.timer-upcoming {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    margin: -16px auto 36px;
+    padding: 0;
+    font-family: var(--font-cjk);
+}
+
+.timer-upcoming-item {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    font-size: 16px;
+    color: var(--text-color);
+    opacity: 0.8;
+}
+
+.timer-upcoming-days {
+    color: var(--heart-color-start);
+    font-weight: 600;
+}
+
+.timer-upcoming-item.is-today {
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--heart-color-end);
+    opacity: 1;
+}
+
 .timer-message {
     font-family: var(--font-cjk);
     font-size: 20px;
@@ -1048,6 +1210,15 @@ body {
         padding: 0 20px;
     }
 
+    .timer-upcoming {
+        margin: -10px auto 26px;
+    }
+
+    .timer-upcoming-item {
+        font-size: 14px;
+        gap: 8px;
+    }
+
     .timer-restart {
         font-size: 14px;
         padding: 12px 30px;
@@ -1072,6 +1243,7 @@ body {
     .timeline-point-visual,
     .timeline-label,
     .info-image,
+    .info-image-container,
     .center-glow {
         animation: none !important;
         transition: none !important;

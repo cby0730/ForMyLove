@@ -10,7 +10,11 @@
 ForMyLove/
 ├── index.html          # HTML 主檔案
 ├── style.css           # CSS 樣式表
-├── script.js           # JavaScript 互動邏輯
+├── content.js          # 文案、日期、照片、彩蛋訊息
+├── script.js           # JavaScript 互動邏輯（五階段、彈窗、計時器、長按）
+├── ambient.js          # 背景花瓣／星星 canvas（window.Ambient）
+├── firework.js         # 花火彩蛋 canvas + Web Audio（window.Firework）
+├── photos/             # N.webp（網站用）、originals/（原始 JPG）
 ├── README.md           # 專案說明
 └── develop.md          # 開發文檔（本文檔）
 ```
@@ -167,7 +171,42 @@ smallHearts.forEach((smallHeart, index) => {
 
 ---
 
-## 🎯 V4 版本（時間軸模式）⭐ 最新版本
+## 🎆 2026-09-30 更新：花火、回憶切換、紀念日
+
+### 花火彩蛋（`firework.js`）
+- 觸發：Stage 1／2 長按大愛心 `CONFIG.longPressMs`（1.5s），移動超過 10px 或提早放開就取消。
+  完成長按的那次放開以 `pointerId` 比對後吞掉，不會同時推進階段。
+- 時間表（秒，`T` 常數）：發射 0.3 → 上升 1.8（鏡頭在花火越過畫面 38% 高度後鎖定跟隨）→
+  頂點停頓 0.4 → 爆炸（閃光、鏡頭拉遠讓整個圓入鏡）→ 垂落 3（訊息逐字浮現）→ 回程 2.5。
+- 「鏡頭」＝把 `.container` 往下平移 `camY`，夜空 `.night-sky` 依高度淡入，背景 canvas 以 0.35 倍視差移動。
+  火花 canvas 與訊息放在 `.container` 外面，不會跟著場景移動。
+- 圓形：火花方向用 Fibonacci 球面均分再投影成平面，速度只加 ±3% 誤差，所以是清楚的圓而不是一團。
+  錦冠菊的垂柳感來自「阻力 + 重力」的固定步長積分，加上離屏 canvas 以半衰期 0.3s 淡出殘影。
+- 聲音：Web Audio 即時合成（上升哨音、爆炸低頻＋濾波雜訊、劈啪聲），長按時在使用者手勢內 `primeAudio()` 解鎖。
+- 減少動態：靜態夜空＋金色圓點圈＋訊息，下一次點擊關閉。
+
+### 回憶切換（C1）
+- `showInfoModal(index, pointEl)` / `stepMemory(±1)`；左右鈕、←／→、水平滑動（>50px 且水平量 > 垂直量 1.2 倍）。
+- 切換時相框 `--ratio` 用 CSS transition 過渡，背後時間軸同步捲到該愛心，關閉後焦點回到它。
+- 到頭不循環，改成小幅回彈。
+
+### 紀念日（C2）
+- `upcomingMilestones()` 以本地日期計算：每 `everyDays` 天（經過天數），加上 `anniversary: true` 的每年週年；2/29 在平年落在 2/28。
+- 紀念日當天計時器頁會下愛心雨。
+
+### 動畫與背景
+- `ambient.js`：分頁隱藏時暫停，DPR 最多 2。
+- 時間軸：捲動時以 rAF 節流，同時更新線條長度與愛心浮現（`revealVisiblePoints`）。
+- 計時器：每一格只有數字改變時翻牌；漸層字放在 `.timer-digit` 上，因為移動中的子元素會破壞父層的 `background-clip: text`。
+
+### 驗證方式
+- 本機：`python3 -m http.server 31060 --bind 127.0.0.1`（只綁本機）。
+- Headless Chrome 視窗最窄 500px，手機尺寸需用 iframe 模擬；虛擬時間下 rAF／CSS transition 不會照常推進，
+  要手動把 GSAP 時間軸 `progress(1)` 或逐格 `seek()`。
+
+---
+
+## 🎯 V4 版本（時間軸模式）
 
 ### 核心功能
 
