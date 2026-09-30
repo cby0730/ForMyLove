@@ -140,6 +140,8 @@ body {
     -webkit-tap-highlight-color: transparent;
     z-index: 10;
     pointer-events: none;
+    /* Hidden until script.js runs, so it doesn't flash on first paint. */
+    opacity: 0;
 }
 
 .heart-visual {
