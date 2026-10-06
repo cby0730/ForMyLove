@@ -67,6 +67,8 @@ GSAP 負責動畫元素的 `transform`／`opacity`；CSS 的 `.stage-N` 只控�
 ### 回一顆愛心
 計時器頁 `.timer-reply`：`sendReplyHeart()` 把次數存在 `localStorage`（`formylove.replies`），飛出一顆 `.particle.reply-heart`（因此 `clearParticles()` 會一起清掉），剛好到 `reply.milestones` 的數字時換文字並下愛心雨。只存在同一個瀏覽器，沒有伺服器，不會跨裝置同步。`localStorage` 在無痕模式可能丟例外，所以一律經過 `readStorage()`／`writeStorage()`。
 
+連點彩蛋跟著畫面上的永久計數 `replyCount` 走：`replyCount % reply.burst.pop` 超過 `swell` 時，按鈕 `scale` 從 1 長到 `maxScale`（`swellScale()`；進到 Stage 4 時 `snapIdleStageVisuals()` 也會套用，所以重新整理後膨脹狀態還在）。每到 `pop` 的倍數呼叫 `burstReplyButton()`：按鈕爆裂淡出，原地一顆 `.particle.reply-burst-heart` 放大到超出螢幕、同時淡出，按鈕再長回來；`burstTimeline` 進行中點擊不計數，`killTransition()` 的 `resetReplyBurst()` 會中止它。`prefers-reduced-motion` 下不膨脹也不爆開。
+
 ### 密碼頁
 `.gate` 放在 `.container` 外、z-index 1000。答案由 `gateAnswers()` 從 `anniversary: true` 的回憶日期產生（`YYYYMMDD` 與 `MMDD`，輸入時非數字會被去掉）。答對後在 `localStorage` 記下 `formylove.unlocked`，才呼叫 `startScene()` 產生小愛心與招呼語；鎖著的時候 `gateOpen` 讓全域 `pointerup` 直接返回，點畫面不會推進階段。
 這只是「軟鎖」：答案就在 `content.js`，照片也能直接用網址打開，擋不住看原始碼的人。GitHub Pages 本身沒有存取控制。另外加了 `robots: noindex` 避免被搜尋引擎收錄。

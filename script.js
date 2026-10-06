@@ -394,6 +394,7 @@ function killTransition() {
     clearModalEffects();
     cancelLineFrame();
     stopFirework();
+    resetReplyBurst();
 }
 
 function applyStageClass() {
@@ -458,6 +459,7 @@ function snapIdleStageVisuals() {
         gsap.set(timelineScroller, { opacity: 0 });
         gsap.set(timelineContinue, { opacity: 1 });
         gsap.set(timerContainer, { opacity: 1 });
+        gsap.set(timerReply, { scale: swellScale() });
         resetTimelineScroll();
     }
 }
@@ -1533,15 +1535,67 @@ function spawnReplyHeart() {
     });
 }
 
+// Follows the visible count: past burst.swell within each burst.pop clicks the
+// button swells, and every multiple of burst.pop bursts it.
+let burstTimeline = null;
+
+function resetReplyBurst() {
+    if (burstTimeline) {
+        burstTimeline.kill();
+        burstTimeline = null;
+    }
+}
+
+function swellScale() {
+    const burst = CONTENT.reply.burst;
+    if (!burst || prefersReduced()) return 1;
+    const step = replyCount % burst.pop;
+    if (step <= burst.swell) return 1;
+    return 1 + (burst.maxScale - 1) * (step - burst.swell) / (burst.pop - burst.swell);
+}
+
+// The button pops into one big heart that grows past the screen edges while it
+// fades out, then the button grows back.
+function burstReplyButton() {
+    const rect = timerReply.getBoundingClientRect();
+    const size = Math.max(window.innerWidth, window.innerHeight) * 2.4;
+    const heart = document.createElement('div');
+    heart.className = 'particle reply-burst-heart';
+    heart.style.width = `${size}px`;
+    heart.style.height = `${size}px`;
+    heart.style.left = `${rect.left + rect.width / 2 - size / 2}px`;
+    heart.style.top = `${rect.top + rect.height / 2 - size / 2}px`;
+    heart.appendChild(createHeartSvg());
+    particlesContainer.appendChild(heart);
+
+    const tl = gsap.timeline({
+        onComplete() {
+            burstTimeline = null;
+        }
+    });
+    burstTimeline = tl;
+    tl.to(timerReply, { scale: CONTENT.reply.burst.maxScale * 1.2, opacity: 0, duration: 0.18, ease: 'power2.in' }, 0);
+    tl.fromTo(heart, { scale: 0.05, opacity: 1 }, { scale: 1, duration: 1.2, ease: 'power2.out' }, 0.12);
+    tl.to(heart, { opacity: 0, duration: 2, ease: 'power1.in' }, 0.62);
+    tl.fromTo(timerReply, { scale: 0.6, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.5, ease: 'back.out(2)' }, 1.8);
+    tl.add(() => heart.remove());
+}
+
 function sendReplyHeart() {
+    if (burstTimeline) return;
     replyCount += 1;
     writeStorage(STORAGE_KEYS.replies, String(replyCount));
     renderReplyCount();
     spawnReplyHeart();
-    if (!prefersReduced()) {
-        gsap.fromTo(timerReply, { scale: 0.92 }, { scale: 1, duration: 0.4, ease: 'back.out(3)' });
-    }
     if (CONTENT.reply.milestones && CONTENT.reply.milestones[replyCount]) spawnHeartRain();
+    if (prefersReduced()) return;
+    const burst = CONTENT.reply.burst;
+    if (burst && replyCount % burst.pop === 0) {
+        burstReplyButton();
+        return;
+    }
+    const base = swellScale();
+    gsap.fromTo(timerReply, { scale: base * 0.92 }, { scale: base, duration: 0.4, ease: 'back.out(3)' });
 }
 
 function startTimer() {

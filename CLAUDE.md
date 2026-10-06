@@ -46,6 +46,8 @@ Clean up any screenshots / temp harness files and stop the server afterwards.
 
 **Anniversaries**: `upcomingAnniversaries()` lists the next yearly anniversary of each memory flagged `anniversary: true` (currently 在一起 and 結婚). On the day it shows "today" and rains hearts; the next day it rolls over to the following year by itself.
 
+**Reply burst** (Stage 4 "回你一顆愛心" button): driven by the persistent visible count `replyCount`, not a per-visit counter. When `replyCount % reply.burst.pop` exceeds `swell` the button scales up (`swellScale()`, also applied on entry by `snapIdleStageVisuals()`), and every multiple of `pop` calls `burstReplyButton()` — a screen-filling heart that fades out, then the button regrows. Clicks are ignored while `burstTimeline` runs; `resetReplyBurst()` in `killTransition()` aborts it. Because the count never resets, milestones like 520/1314 still fire. Skipped under `prefers-reduced-motion`.
+
 **Fonts**: stack prefers system 標楷體 with LXGW WenKai TC (Google Fonts) fallback. 標楷體 has no kana, so Japanese lines get `lang="ja"` and a WenKai-first stack to avoid mixed glyphs.
 
 ## Headless visual verification

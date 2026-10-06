@@ -100,6 +100,8 @@ window.CONTENT = {
     // milestones：送到剛好這個數字時顯示的特別文字。
     reply: {
         button: '回你一顆愛心 ❤️',
+        // 這次造訪內連點超過 swell 下後按鈕慢慢膨脹，點到 pop 下炸出一顆大愛心。
+        burst: { swell: 80, pop: 100, maxScale: 2.2 },
         count: '妳已經送我 {n} 顆愛心',
         milestones: {
             1: '收到妳的第一顆愛心了 🥰',
